@@ -6,6 +6,10 @@
 * **Separation of Logic and Data**: The game logic should be separated from the data storage to allow for easier scaling and maintenance.
 
 ## Service Boundaries
+![Service Boundaries](./images/system_diagram.jpg)
+* The **Game Lobby** service will be a cluster managed by a load balancer and will handle the game logic and communication with the clients.
+* The **User Manager** service will be a separate cluster managed by a load balancer and will handle user authentication and authorization with additional data manipulation options.
+* The **Exchange API** service is a remote service that will be used to get the latest exchange rates for the game and stocked in the **Exchange Cache**.
 
 ## Technology Stack
 

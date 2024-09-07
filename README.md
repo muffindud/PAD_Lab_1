@@ -12,6 +12,20 @@
 * The **Exchange API** service is a remote service that will be used to get the latest exchange rates for the game and stocked in the **Exchange Cache**.
 
 ## Technology Stack
+#### Communication:
+* **Gateway**: Python
+* **Service Discovery**: Python
+* **Load Balancer**: Python
+
+#### Services:
+* **Game Lobby**: Kotlin
+* **User Manager**: JavaScript
+
+#### Databases:
+* **User SQL Database**: PostgreSQL
+* **Transfers Graph Database**: TypeDB
+* **Log NoSQL Database**: MongoDB
+* **Exchange Cache**: Python (custom cache)
 
 ## Data Management
 

@@ -2,30 +2,45 @@
 
 ## Application Suitability
 * **Real-Time Communication**: The game requires real-time communication between the client and the server to get the latest results of the game.
+    *Example*: Multiuser chat applications:
+    * Discord - Real-time communication between users in chat rooms.
 * **Redundancy and Scalability**: The game should be able to handle a large number of users and should be able to scale horizontally and reduce downtime in case of server failure.
+    *Example*: Media platforms:
+    * Netflix - Localized servers to reduce latency and increase availability.
+
 * **Separation of Logic and Data**: The game logic should be separated from the data storage to allow for easier scaling and maintenance.
+    *Example*: Games with progression systems:
+    * Fornite - Gameplay logic is separated from individual progression.
 
 ## Service Boundaries
 ![Service Boundaries](./images/system_diagram.jpg)
+
+#### Services
 * The **Game Lobby** service will be a cluster managed by a load balancer and will handle the game logic and communication with the clients.
 * The **User Manager** service will be a separate cluster managed by a load balancer and will handle user authentication and authorization with additional data manipulation options.
 * The **Exchange API** service is a remote service that will be used to get the latest exchange rates for the game and stocked in the **Exchange Cache**.
 
+#### Databases
+* The **User SQL Database** will store user data such as username, password, email, and balance.
+* The **Transfers Graph Database** will store the transfer history between users.
+* The **Log NoSQL Database** will store the logs of the game.
+
 ## Technology Stack
 #### Communication:
-* **Gateway**: Python
-* **Service Discovery**: Python
-* **Load Balancer**: Python
+* **Gateway**: Python (Flask, WebSocket, Requests)
+* **Service Discovery**: Python (Flask, Web Socket, Requests)
+* **Load Balancer**: Python (Flask, WebSocket, Requests)
 
 #### Services:
-* **Game Lobby**: Kotlin
-* **User Manager**: JavaScript
+* **Game Lobby**: Kotlin (ktor) - Handles the main game logic, uses WebSockets for real-time communication with the clients (required due to the real-time async nature of the game). User actions are sent using gRPC requests.
+* **User Manager**: JavaScript (Express, pg) - Handles user authentication and authorization, uses REST for communication with the clients (due to request based nature of the service it is more suitable for REST).
+* **Exchange API**: HTTP - Remote service that will be used to get the latest exchange rates for the game.
 
 #### Databases:
 * **User SQL Database**: PostgreSQL
-* **Transfers Graph Database**: TypeDB
+* **Transfers Graph Database**: Neo4j
 * **Log NoSQL Database**: MongoDB
-* **Exchange Cache**: Python (custom cache)
+* **Exchange Cache**: Python (Flask)
 
 ## Data Management
 * Health (all services):
@@ -60,9 +75,7 @@
             ```
             * Request body:
             ```json
-            {
-                "amount": "number"
-            }
+            "amount": "number"
             ```
             * Response body 200:
             ```json
@@ -82,7 +95,7 @@
                 "message": "Unauthorized"
             }
             ```
-        * `rpc /action` - Perform an action in the game.
+        * `rpc /action` - Perform an action in the game [stand, hit, split, double down].
             * Request headers:
             ```
             ...
@@ -91,9 +104,7 @@
             ```
             * Request body:
             ```json
-            {
-                "action": "string"
-            }
+            "action": "string"
             ```
             * Response body 200:
             ```json
@@ -250,7 +261,7 @@
             * Request headers:
             ```
             ...
-            Authorization: Bearer
+            Authorization: Bearer <token>
             ...
             ```
             * Request body:
@@ -280,6 +291,7 @@
 
 
 ## Deployment and Scaling
-The services will be deployed using Docker.
-The **Game Lobby** and **User Manager** services will be deployed with replicas to handle the load and reduce downtime in case of server failure.
-The **Exchange Cache** will be deployed as a separate service to handle the exchange rate caching in order to reduce the load on the **Exchange API** service. Will have an expiration time of 1 hour and will only be populated if unexisting or expired data is requested.
+* Each service will be deployed using *Docker*.
+* The **Game Lobby** and **User Manager** services will be deployed with replicas to handle the load and reduce downtime in case of server failure.
+* The **Exchange Cache** will be deployed as a separate service to handle the exchange rate caching in order to reduce the load on the **Exchange API** service. Will have an expiration time of 1 hour and will only be populated if unexisting or expired data is requested.
+* The system will be deployed using *Docker Compose* which will manage service clusters.

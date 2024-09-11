@@ -32,16 +32,15 @@
 * **Load Balancer**: Python (Flask, WebSocket, Requests)
 
 #### Services:
-* **Game Lobby**: Kotlin (ktor)
-* **User Manager**: JavaScript (Express, pg)
+* **Game Lobby**: Kotlin (ktor) - Handles the main game logic, uses WebSockets for real-time communication with the clients (required due to the real-time async nature of the game). User actions are sent using gRPC requests.
+* **User Manager**: JavaScript (Express, pg) - Handles user authentication and authorization, uses REST for communication with the clients (due to request based nature of the service it is more suitable for REST).
+* **Exchange API**: HTTP - Remote service that will be used to get the latest exchange rates for the game.
 
 #### Databases:
 * **User SQL Database**: PostgreSQL
 * **Transfers Graph Database**: Neo4j
 * **Log NoSQL Database**: MongoDB
 * **Exchange Cache**: Python (Flask)
-
-<!-- TODO: Why WS? Why REST? Why gRPC? -->
 
 ## Data Management
 * Health (all services):

@@ -14,11 +14,16 @@
 
 ## Service Boundaries
 ![Service Boundaries](./images/system_diagram.jpg)
+
+#### Services
 * The **Game Lobby** service will be a cluster managed by a load balancer and will handle the game logic and communication with the clients.
 * The **User Manager** service will be a separate cluster managed by a load balancer and will handle user authentication and authorization with additional data manipulation options.
 * The **Exchange API** service is a remote service that will be used to get the latest exchange rates for the game and stocked in the **Exchange Cache**.
 
-<!-- TODO: Describe databases (SQL, NoSQL, graph DB) -->
+#### Databases
+* The **User SQL Database** will store user data such as username, password, email, and balance.
+* The **Transfers Graph Database** will store the transfer history between users.
+* The **Log NoSQL Database** will store the logs of the game.
 
 ## Technology Stack
 #### Communication:

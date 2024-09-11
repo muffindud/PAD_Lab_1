@@ -75,9 +75,7 @@
             ```
             * Request body:
             ```json
-            {
-                "amount": "number"
-            }
+            "amount": "number"
             ```
             * Response body 200:
             ```json
@@ -97,7 +95,7 @@
                 "message": "Unauthorized"
             }
             ```
-        * `rpc /action` - Perform an action in the game.
+        * `rpc /action` - Perform an action in the game [stand, hit, split, double down].
             * Request headers:
             ```
             ...
@@ -106,9 +104,7 @@
             ```
             * Request body:
             ```json
-            {
-                "action": "string"
-            }
+            "action": "string"
             ```
             * Response body 200:
             ```json

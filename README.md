@@ -27,19 +27,19 @@
 
 ## Technology Stack
 #### Communication:
-* **Gateway**: Python
-* **Service Discovery**: Python
-* **Load Balancer**: Python
+* **Gateway**: Python (Flask, WebSocket, Requests)
+* **Service Discovery**: Python (Flask, Web Socket, Requests)
+* **Load Balancer**: Python (Flask, WebSocket, Requests)
 
 #### Services:
-* **Game Lobby**: Kotlin
-* **User Manager**: JavaScript
+* **Game Lobby**: Kotlin (ktor)
+* **User Manager**: JavaScript (Express, pg)
 
 #### Databases:
 * **User SQL Database**: PostgreSQL
-* **Transfers Graph Database**: TypeDB
+* **Transfers Graph Database**: Neo4j
 * **Log NoSQL Database**: MongoDB
-* **Exchange Cache**: Python (custom cache)
+* **Exchange Cache**: Python (Flask)
 
 <!-- TODO: Why WS? Why REST? Why gRPC? -->
 

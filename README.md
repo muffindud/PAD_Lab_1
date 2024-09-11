@@ -2,10 +2,15 @@
 
 ## Application Suitability
 * **Real-Time Communication**: The game requires real-time communication between the client and the server to get the latest results of the game.
+    *Example*: Multiuser chat applications:
+    * Discord - Real-time communication between users in chat rooms.
 * **Redundancy and Scalability**: The game should be able to handle a large number of users and should be able to scale horizontally and reduce downtime in case of server failure.
-* **Separation of Logic and Data**: The game logic should be separated from the data storage to allow for easier scaling and maintenance.
+    *Example*: Media platforms:
+    * Netflix - Localized servers to reduce latency and increase availability.
 
-<!-- TODO: Add examples -->
+* **Separation of Logic and Data**: The game logic should be separated from the data storage to allow for easier scaling and maintenance.
+    *Example*: Games with progression systems:
+    * Fornite - Gameplay logic is separated from individual progression.
 
 ## Service Boundaries
 ![Service Boundaries](./images/system_diagram.jpg)
@@ -256,7 +261,7 @@
             * Request headers:
             ```
             ...
-            Authorization: Bearer
+            Authorization: Bearer <token>
             ...
             ```
             * Request body:

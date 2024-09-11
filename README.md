@@ -296,8 +296,7 @@
 
 
 ## Deployment and Scaling
-The services will be deployed using Docker.
-The **Game Lobby** and **User Manager** services will be deployed with replicas to handle the load and reduce downtime in case of server failure.
-The **Exchange Cache** will be deployed as a separate service to handle the exchange rate caching in order to reduce the load on the **Exchange API** service. Will have an expiration time of 1 hour and will only be populated if unexisting or expired data is requested.
-
-<!-- TODO: Explain Docker replicas mechanism. -->
+* Each service will be deployed using *Docker*.
+* The **Game Lobby** and **User Manager** services will be deployed with replicas to handle the load and reduce downtime in case of server failure.
+* The **Exchange Cache** will be deployed as a separate service to handle the exchange rate caching in order to reduce the load on the **Exchange API** service. Will have an expiration time of 1 hour and will only be populated if unexisting or expired data is requested.
+* The system will be deployed using *Docker Compose* which will manage service clusters.

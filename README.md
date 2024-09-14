@@ -13,12 +13,12 @@
     * Fornite - Gameplay logic is separated from individual progression.
 
 ## Service Boundaries
-![Service Boundaries](./images/system_diagram.jpg)
+![Service Boundaries](./images/system_diagram.png)
 
 #### Services
 * The **Game Lobby** service will be a cluster managed by a load balancer and will handle the game logic and communication with the clients.
 * The **User Manager** service will be a separate cluster managed by a load balancer and will handle user authentication and authorization with additional data manipulation options.
-* The **Exchange API** service is a remote service that will be used to get the latest exchange rates for the game and stocked in the **Exchange Cache**.
+* The **Exchange Service** is a remote service that will be used to get the latest exchange rates for the game and stocked in the **Exchange Cache**.
 
 #### Databases
 * The **User SQL Database** will store user data such as username, password, email, and balance.
@@ -34,7 +34,7 @@
 #### Services:
 * **Game Lobby**: Kotlin (ktor) - Handles the main game logic, uses WebSockets for real-time communication with the clients (required due to the real-time async nature of the game). User actions are sent using gRPC requests.
 * **User Manager**: JavaScript (Express, pg) - Handles user authentication and authorization, uses REST for communication with the clients (due to request based nature of the service it is more suitable for REST).
-* **Exchange API**: HTTP - Remote service that will be used to get the latest exchange rates for the game.
+* **Exchange Service**: JavaScript - Remote service that will be used to get the latest exchange rates for the game.
 
 #### Databases:
 * **User SQL Database**: PostgreSQL

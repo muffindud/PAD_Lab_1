@@ -1,0 +1,36 @@
+services:
+  user_manager_db:
+    image: postgres:13
+    restart: always
+    user: ${DB_USER}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_DB=${DB_NAME}
+
+  user_manager:
+    build: ./user_manager
+    ports:
+      - "${USER_MANAGER_PORT}:${USER_MANAGER_PORT}"
+    depends_on:
+      user_manager_db:
+        condition: service_healthy
+    environment:
+      - DB_HOST = ${DB_HOST}
+      - DB_PORT = ${DB_PORT}
+      - DB_USER = ${DB_USER}
+      - DB_PASS = ${DB_PASS}
+      - DB_NAME = ${DB_NAME}
+
+volumes:
+  db_data:
+

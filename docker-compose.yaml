@@ -11,25 +11,26 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "${DB_PORT}:${DB_PORT}"
+      - "$DB_PORT:$DB_PORT"
     environment:
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASS}
-      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=$DB_USER
+      - POSTGRES_PASSWORD=$DB_PASS
+      - POSTGRES_DB=$DB_NAME
 
   user_manager:
     build: ./user_manager
     ports:
-      - "${USER_MANAGER_PORT}:${USER_MANAGER_PORT}"
+      - "$USER_MANAGER_PORT:$USER_MANAGER_PORT"
     depends_on:
       user_manager_db:
         condition: service_healthy
     environment:
-      - DB_HOST = ${DB_HOST}
-      - DB_PORT = ${DB_PORT}
-      - DB_USER = ${DB_USER}
-      - DB_PASS = ${DB_PASS}
-      - DB_NAME = ${DB_NAME}
+      - DB_HOST=user_manager_db
+      - DB_PORT=$DB_PORT
+      - DB_USER=$DB_USER
+      - DB_PASS=$DB_PASS
+      - DB_NAME=$DB_NAME
+      - PORT=$USER_MANAGER_PORT
 
 volumes:
   db_data:

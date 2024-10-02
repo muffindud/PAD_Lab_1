@@ -31,6 +31,7 @@ services:
       - DB_PASS=$DB_PASS
       - DB_NAME=$DB_NAME
       - PORT=$USER_MANAGER_PORT
+      - JWT_SECRET=$USER_MANAGER_JWT_SECRET
 
 volumes:
   db_data:

@@ -2,6 +2,15 @@ const express = require("express");
 const axios = require("axios");
 const router = express.Router();
 
+const requestWithTimeout = (url, timeout = 10000) => {
+  return Promise.race([
+    axios.get(url),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Request timed out")), timeout)
+    ),
+  ]);
+};
+
 router.get("/exchange-rate", async (req, res) => {
   const { baseCurrency, targetCurrency } = req.query;
 
@@ -17,7 +26,7 @@ router.get("/exchange-rate", async (req, res) => {
 
   try {
     const apiUrl = `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${baseCurrency}.json`;
-    const response = await axios.get(apiUrl);
+    const response = await requestWithTimeout(apiUrl);
     const rates = response.data[baseCurrency];
 
     if (rates && rates[targetCurrency]) {
@@ -32,7 +41,9 @@ router.get("/exchange-rate", async (req, res) => {
     }
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error fetching exchange rate." });
+    res
+      .status(500)
+      .json({ message: "Error fetching exchange rate." + error.message });
   }
 });
 

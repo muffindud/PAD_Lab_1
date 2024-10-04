@@ -17,6 +17,20 @@ services:
       - POSTGRES_PASSWORD=$DB_PASS
       - POSTGRES_DB=$DB_NAME
 
+  user_manager_transfer_db:
+    image: neo4j:4.2
+    restart: always
+    ports:
+      - "$NEO4J_BOLT_PORT:$NEO4J_BOLT_PORT"
+      - "$NEO4J_BROWSER_PORT:$NEO4J_BROWSER_PORT"
+    environment:
+      - NEO4J_AUTH=neo4j/$NEO4J_PASS
+    volumes:
+      - /var/lib/neo4j/data:/data
+      - /var/lib/neo4j/logs:/logs
+      - /var/lib/neo4j/config:/config
+      - /var/lib/neo4j/plugins:/plugins
+
   user_manager:
     build: ./user_manager
     ports:
@@ -30,6 +44,12 @@ services:
       - DB_USER=$DB_USER
       - DB_PASS=$DB_PASS
       - DB_NAME=$DB_NAME
+      - NEO4J_BOLT_PORT=$NEO4J_BOLT_PORT
+      - NEO4J_BROWSER_PORT=$NEO4J_BROWSER_PORT
+      - NEO4J_USER=$NEO4J_USER
+      - NEO4J_PASS=$NEO4J_PASS
+      - NEO4J_HOST=user_manager_transfer_db
+      - NEO4J_DATABASE=$NEO4J_DATABASE
       - PORT=$USER_MANAGER_PORT
       - JWT_USER_SECRET=$USER_MANAGER_JWT_USER_SECRET
       - JWT_INTERNAL_SECRET=$USER_MANAGER_JWT_INTERNAL_SECRET

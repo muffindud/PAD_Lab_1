@@ -7,8 +7,8 @@ services:
       - db_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
-      interval: 10s
-      timeout: 5s
+      interval: 2s
+      timeout: 1s
       retries: 5
     ports:
       - "$DB_PORT:$DB_PORT"
@@ -31,7 +31,8 @@ services:
       - DB_PASS=$DB_PASS
       - DB_NAME=$DB_NAME
       - PORT=$USER_MANAGER_PORT
-      - JWT_SECRET=$USER_MANAGER_JWT_SECRET
+      - JWT_USER_SECRET=$USER_MANAGER_JWT_USER_SECRET
+      - JWT_INTERNAL_SECRET=$USER_MANAGER_JWT_INTERNAL_SECRET
 
 volumes:
   db_data:

@@ -3,14 +3,19 @@ module.exports = app => {
 
     var router = require('express').Router();
 
-    router.use((req, res, next) => {
-        console.log(`${req.ip} - - [${new Date().toUTCString()}] "${req.method} ${req.path} HTTP/1.1" ${res.statusCode} - "${req.headers['user-agent']}"`);
-        next();
-        }
-    );
-
     router.get('/', (req, res) => {
         res.send('Hello World!');
-        }
-    );
+    });
+
+    // Client endpoints
+    router.post('/register', users.secureCreate);
+    router.get('/login', users.secureLogin);
+    router.get('/profile', users.secureFind);
+    router.post('/transfer', users.secureTransfer);
+
+    // Internal endpoints
+    router.get('/balance/:user_id', users.internalBalance);
+    router.put('/balance/:user_id', users.internalUpdateBalance);
+
+    app.use('/', router);
 };

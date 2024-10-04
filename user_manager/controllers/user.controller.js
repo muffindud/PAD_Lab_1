@@ -6,7 +6,6 @@ const { generateUserToken, verifyUserToken, verifyInternalToken } = require('../
 
 User.secureCreate = (req, res) => {
     password_hash = bcrypt.hashSync(req.body.password, 8);
-    console.log("2: ", password_hash);
 
     const user = {
         username: req.body.username,
@@ -25,11 +24,9 @@ User.secureCreate = (req, res) => {
                 return res.status(409).send({ message: 'Username already exists.' });
             }
 
-            console.log("3: ", user);
             User.create(user)
                 .then(data => {
                     const token = generateUserToken(data.username);
-                    console.log("4: ", token);
                     res.send({ token: token });
                 })
                 .catch(err => {
@@ -68,9 +65,7 @@ User.secureLogin = (req, res) => {
                 });
             }
 
-            console.log("5: ", data.username);
             const token = generateUserToken(data.username);
-            console.log("6: ", token);
             res.status(200).send({ token: token });
         })
         .catch(err => {
@@ -126,7 +121,6 @@ User.secureTransfer = (req, res) => {
                 return res.status(400).send({ message: 'Insufficient balance.' });
             }
 
-            // get the receiver from the database
             User.findOne({
                 where: {
                     username: receiver
@@ -155,6 +149,7 @@ User.secureTransfer = (req, res) => {
                                 })
                                     .then(num => {
                                         if (num == 1) {
+                                            // TODO: Add transfer to neo4j database
                                             return res.status(200).send({ message: 'Transfer successful.' });
                                         }
                                     })
@@ -177,11 +172,84 @@ User.secureTransfer = (req, res) => {
 };
 
 User.internalBalance = (req, res) => {
-    
+    const token = req.headers['x-access-token'];
+
+    if (!token) {
+        return res.status(401).send({ message: 'Unauthorized' });
+    }
+
+    const decoded = verifyInternalToken(token);
+
+    if (!decoded) {
+        return res.status(401).send({ message: 'Unauthorized' });
+    }
+
+    const user_id = req.params.user_id;
+    User.findOne({
+        where: {
+            id: user_id
+        }
+    })
+        .then(data => {
+            if (!data) {
+                return res.status(404).send({ message: 'User Not found.' });
+            }
+
+            res.status(200).send({
+                balance: data.balance
+            });
+        })
+        .catch(err => {
+            res.status(500).send({ message: err.message });
+        });
 };
 
 User.internalUpdateBalance = (req, res) => {
-    
+    const token = req.headers['x-access-token'];
+
+    if (!token) {
+        return res.status(401).send({ message: 'Unauthorized' });
+    }
+
+    const decoded = verifyInternalToken(token);
+
+    if (!decoded) {
+        return res.status(401).send({ message: 'Unauthorized' });
+    }
+
+    const user_id = req.params.user_id;
+    const balance = req.body.balance;
+
+    User.findOne({
+        where: {
+            id: user_id
+        }
+    })
+        .then(data => {
+            if (!data) {
+                return res.status(404).send({ message: 'User Not found.' });
+            }
+        })
+        .catch(err => {
+            res.status(500).send({ message: err.message });
+        });
+
+    User.update({
+        balance: balance
+    }, {
+        where: {
+            id: user_id
+        }
+    })
+        .then(num => {
+            if (num == 1) {
+                // TODO: Add update balance to neo4j database
+                res.status(200).send({ message: 'Balance updated successfully.' });
+            }
+        })
+        .catch(err => {
+            res.status(500).send({ message: err.message });
+        });
 };
 
 module.exports = User;

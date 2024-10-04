@@ -9,7 +9,8 @@ app.use(express.json());
 
 app.use((req, res, next) => {
     console.log(`${req.ip} - - [${new Date().toUTCString()}] "${req.method} ${req.path} HTTP/1.1" ${res.statusCode} - "${req.headers['user-agent']}"`);
-    console.log("1: ", req.body);
+    console.log("Headers: ", req.headers);
+    console.log("Body: ", req.body);
     next();
 })
 

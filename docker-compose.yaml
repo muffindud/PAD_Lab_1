@@ -52,8 +52,20 @@ services:
       - NEO4J_DATABASE=$NEO4J_DATABASE
       - PORT=$USER_MANAGER_PORT
       - JWT_USER_SECRET=$USER_MANAGER_JWT_USER_SECRET
-      - JWT_INTERNAL_SECRET=$USER_MANAGER_JWT_INTERNAL_SECRET
+      - JWT_INTERNAL_SECRET=$JWT_INTERNAL_SECRET
+
+  game_lobby:
+    build: ./game_lobby
+    ports:
+      - "$GAME_LOBBY_PORT:$GAME_LOBBY_PORT"
+    # depends_on:
+    #   user_manager:
+    #     condition: service_healthy
+    environment:
+      - USER_MANAGER_HOST=user_manager
+      - USER_MANAGER_PORT=$USER_MANAGER_PORT
+      - GAME_LOBBY_PORT=$GAME_LOBBY_PORT
+      - JWT_INTERNAL_SECRET=$JWT_INTERNAL_SECRET
 
 volumes:
   db_data:
-

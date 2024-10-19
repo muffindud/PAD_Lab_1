@@ -29,11 +29,10 @@ fun Application.configureSockets() {
                 send("You said: $receivedText")
             }
         }
-        webSocket("/connect/{user_token}/{game_id}") {
-            val userToken = call.parameters["user_token"]
+        webSocket("/connect/{game_id}") {
             val gameId = call.parameters["game_id"]
-            if (userToken == null || gameId == null) {
-                close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Invalid parameters"))
+            if (gameId == null) {
+                // TODO: Get a random game id
                 return@webSocket
             }
             send("Connected to game $gameId")

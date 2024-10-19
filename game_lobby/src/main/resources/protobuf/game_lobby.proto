@@ -1,0 +1,51 @@
+syntax="proto3";
+
+// Action enum: player
+enum Action {
+  HIT = 0;
+  STAND = 1;
+  DOUBLE = 2;
+  SPLIT = 3;
+}
+
+// Cards enum: card
+enum Card {
+  ACE = 0;
+  TWO = 1;
+  THREE = 2;
+  FOUR = 3;
+  FIVE = 4;
+  SIX = 5;
+  SEVEN = 6;
+  EIGHT = 7;
+  NINE = 8;
+  TEN = 9;
+  JACK = 10;
+  QUEEN = 11;
+  KING = 12;
+}
+
+// Suit enum: card
+enum Suit {
+  HEARTS = 0;
+  DIAMONDS = 1;
+  CLUBS = 2;
+  SPADES = 3;
+}
+
+// card message: tableStateChange, playerStateChange
+message card {
+  Card card = 1;
+  Suit suit = 2;
+}
+
+// server -> clients
+message tableStateChange {
+  Card card = 1;
+}
+
+// server -> clients
+message playerStateChange {
+  string username = 1;
+  Card card = 2;
+}

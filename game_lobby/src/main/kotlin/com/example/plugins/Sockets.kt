@@ -8,7 +8,6 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import java.time.*
-import kotlinx.serialization.protobuf.*
 
 fun Application.configureSockets() {
     install(WebSockets) {
@@ -17,7 +16,6 @@ fun Application.configureSockets() {
         timeout = Duration.ofSeconds(15)
         maxFrameSize = Long.MAX_VALUE
         masking = false
-        contentConverter = KotlinxWebsocketSerializationConverter(ProtoBuf)
 
     }
     routing {

@@ -1,14 +1,9 @@
 package com.example
 
 import com.example.plugins.*
-import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import kotlinx.coroutines.runBlocking
 
 var game_lobby_port: Int = 8000
 var user_manager_host: String = "user_manager"
@@ -41,8 +36,8 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
+    configureSecurity(jwt_user_secret, jwt_internal_secret)
     configureSockets()
     configureMonitoring()
     configureRouting()
-    configureSecurity(jwt_user_secret, jwt_internal_secret)
 }

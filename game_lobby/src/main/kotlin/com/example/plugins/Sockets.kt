@@ -33,12 +33,25 @@ fun Application.configureSockets() {
             webSocket("/connect/{game_id}") {
                 val gameId = call.parameters["game_id"]?.toIntOrNull() ?: return@webSocket close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Invalid game id"))
                 val username = call.principal<JWTPrincipal>()?.payload?.getClaim("username")?.asString()
-                send("Player $username connected to game $gameId")
-                for (frame in incoming) {
-                    frame as? Frame.Text ?: continue
-                    val receivedText = frame.readText()
-                    send("You said: $receivedText")
+
+                // save to lobby
+                lobbies.getOrPut(gameId) { mutableListOf() }.add(this)
+
+                // notify other users that user joined
+                lobbies[gameId]?.forEach { it.send("[$username] joined the lobby $gameId") }
+                try {
+                    for (frame in incoming) {
+                        frame as? Frame.Text ?: continue
+                        val receivedText = frame.readText()
+                        lobbies[gameId]?.forEach { it.send("[$username] $receivedText") }
+                    }
+                } finally {
+                    // Remove from lobby
+                    lobbies[gameId]?.remove(this)
                 }
+
+                // notify other users that user left
+                lobbies[gameId]?.forEach { it.send("[$username] left the lobby $gameId") }
             }
         }
     }

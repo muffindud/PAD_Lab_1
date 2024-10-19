@@ -9,16 +9,10 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
 
 fun Application.configureSecurity(userJWT: String, serverJWT: String) {
-    // Please read the jwt property from the config file if you are using EngineMain
-    val jwtAudience = "jwt-audience"
-    val jwtDomain = "https://jwt-provider-domain/"
-    val jwtRealm = "ktor sample app"
     authentication {
         jwt("user_jwt") {
             verifier(JWT
                 .require(Algorithm.HMAC256(userJWT))
-                .withAudience(jwtAudience)
-                .withIssuer(jwtDomain)
                 .build()
             )
             validate {
@@ -29,7 +23,7 @@ fun Application.configureSecurity(userJWT: String, serverJWT: String) {
                     null
                 }
             }
-            challenge { defaultScheme, realm ->
+            challenge { _, _ ->
                 call.respond(HttpStatusCode.Unauthorized, "Unauthorized")
             }
         }
@@ -37,8 +31,6 @@ fun Application.configureSecurity(userJWT: String, serverJWT: String) {
         jwt("server_jwt") {
             verifier(JWT
                 .require(Algorithm.HMAC256(serverJWT))
-                .withAudience(jwtAudience)
-                .withIssuer(jwtDomain)
                 .build()
             )
             validate {
@@ -49,7 +41,7 @@ fun Application.configureSecurity(userJWT: String, serverJWT: String) {
                     null
                 }
             }
-            challenge { defaultScheme, realm ->
+            challenge { _, _ ->
                 call.respond(HttpStatusCode.Unauthorized, "Unauthorized")
             }
         }

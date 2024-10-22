@@ -31,6 +31,18 @@ services:
       - /var/lib/neo4j/config:/config
       - /var/lib/neo4j/plugins:/plugins
 
+  gateway:
+    build: ./gateway
+    ports:
+      - "$GATEWAY_PORT:$GATEWAY_PORT"
+    depends_on:
+      - user_manager
+      - game_lobby
+      - exchange-service
+    environment:
+      - FLASK_RUN_PORT=$GATEWAY_PORT
+      - FLASK_RUN_HOST=0.0.0.0
+
   user_manager:
     build: ./user_manager
     ports:

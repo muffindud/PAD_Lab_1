@@ -53,6 +53,8 @@ services:
       - PORT=$USER_MANAGER_PORT
       - JWT_USER_SECRET=$USER_MANAGER_JWT_USER_SECRET
       - JWT_INTERNAL_SECRET=$JWT_INTERNAL_SECRET
+      - EXCHANGE_SERVICE_HOST=exchange-service
+      - EXCHANGE_SERVICE_PORT=$EXCHANGE_SERVICE_PORT
 
   game_lobby:
     build: ./game_lobby
@@ -67,6 +69,15 @@ services:
       - GAME_LOBBY_PORT=$GAME_LOBBY_PORT
       - JWT_INTERNAL_SECRET=$JWT_INTERNAL_SECRET
       - JWT_USER_SECRET=$USER_MANAGER_JWT_USER_SECRET
+      - EXCHANGE_SERVICE_HOST=exchange-service
+      - EXCHANGE_SERVICE_PORT=$EXCHANGE_SERVICE_PORT
+
+  exchange-service:
+    build: ./exchange-service
+    ports:
+      - "$EXCHANGE_SERVICE_PORT:$EXCHANGE_SERVICE_PORT"
+    environment:
+      - PORT=$EXCHANGE_SERVICE_PORT
 
 volumes:
   db_data:

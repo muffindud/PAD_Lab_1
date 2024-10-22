@@ -38,6 +38,8 @@ services:
       - FLASK_RUN_HOST=0.0.0.0
       - USER_MANAGER_HOST=user_manager
       - USER_MANAGER_PORT=$USER_MANAGER_PORT
+      - GAME_LOBBY_HOST=game_lobby
+      - GAME_LOBBY_PORT=$GAME_LOBBY_PORT
 
   user_manager:
     build: ./user_manager

@@ -75,9 +75,12 @@ User.secureLogin = (req, res) => {
 };
 
 User.secureFind = (req, res) => {
-    const token = req.headers['x-access-token'];
+    if (!req.get('Authorization')) {
+        return res.status(401).send({ message: 'Unauthorized' });
+    }
+
+    const token = req.get('Authorization').split(' ')[1];
     const decoded = verifyUserToken(token);
-    // get the user from the database
     const user = User.findOne({
         where: {
             username: decoded.username
@@ -100,7 +103,11 @@ User.secureFind = (req, res) => {
 };
 
 User.secureTransfer = (req, res) => {
-    const token = req.headers['x-access-token'];
+    if (!req.get('Authorization')) {
+        return res.status(401).send({ message: 'Unauthorized' });
+    }
+
+    const token = req.get('Authorization').split(' ')[1];
     const decoded = verifyUserToken(token);
     const sender = decoded.username;
     const receiver = req.body.username;
@@ -172,7 +179,11 @@ User.secureTransfer = (req, res) => {
 };
 
 User.internalBalance = (req, res) => {
-    const token = req.headers['x-access-token'];
+    if (!req.get('Authorization')) {
+        return res.status(401).send({ message: 'Unauthorized' });
+    }
+
+    const token = req.get('Authorization').split(' ')[1];
 
     if (!token) {
         return res.status(401).send({ message: 'Unauthorized' });
@@ -205,7 +216,11 @@ User.internalBalance = (req, res) => {
 };
 
 User.internalUpdateBalance = (req, res) => {
-    const token = req.headers['x-access-token'];
+    if (!req.get('Authorization')) {
+        return res.status(401).send({ message: 'Unauthorized' });
+    }
+
+    const token = req.get('Authorization').split(' ')[1];
 
     if (!token) {
         return res.status(401).send({ message: 'Unauthorized' });

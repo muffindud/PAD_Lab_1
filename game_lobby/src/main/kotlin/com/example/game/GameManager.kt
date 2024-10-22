@@ -37,6 +37,10 @@ class GameManager {
             println(card.toString())
         }
     }
+
+    fun executeRequest() {
+
+    }
 }
 
 fun getScore(cards: MutableList<Card>): Int {

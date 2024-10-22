@@ -1,5 +1,6 @@
 package com.example.plugins
 
+import com.example.models.Lobby
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -11,7 +12,7 @@ import kotlinx.serialization.json.Json
 import java.time.*
 
 fun Application.configureSockets() {
-    val lobbies = mutableMapOf<Int, MutableList<WebSocketSession>>()
+    val lobbies = mutableMapOf<Int, Lobby>()
     install(WebSockets) {
         // TODO: Adjust values
         pingPeriod = Duration.ofSeconds(15)
@@ -35,23 +36,23 @@ fun Application.configureSockets() {
                 val username = call.principal<JWTPrincipal>()?.payload?.getClaim("username")?.asString()
 
                 // save to lobby
-                lobbies.getOrPut(gameId) { mutableListOf() }.add(this)
+                lobbies.getOrPut(gameId) { Lobby() }.addClient(this)
 
                 // notify other users that user joined
-                lobbies[gameId]?.forEach { it.send("[$username] joined the lobby $gameId") }
+                lobbies[gameId]?.broadcast("[$username] joined the lobby $gameId")
                 try {
                     for (frame in incoming) {
                         frame as? Frame.Text ?: continue
                         val receivedText = frame.readText()
-                        lobbies[gameId]?.forEach { it.send("[$username] $receivedText") }
+                        lobbies[gameId]?.handleCommand(receivedText, this, username)
                     }
                 } finally {
                     // Remove from lobby
-                    lobbies[gameId]?.remove(this)
+                    lobbies[gameId]?.removeClient(this)
                 }
 
                 // notify other users that user left
-                lobbies[gameId]?.forEach { it.send("[$username] left the lobby $gameId") }
+                lobbies[gameId]?.broadcast("[$username] left the lobby $gameId")
             }
         }
     }

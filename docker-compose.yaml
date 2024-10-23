@@ -104,6 +104,8 @@ services:
 
   exchange-service:
     build: ./exchange-service
+    ports:
+      - "$EXCHANGE_SERVICE_PORT:$EXCHANGE_SERVICE_PORT"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:$EXCHANGE_SERVICE_PORT/health"]
       interval: 15s
@@ -112,6 +114,8 @@ services:
       start_period: 30s
     environment:
       - PORT=$EXCHANGE_SERVICE_PORT
+      - EXCHANGE_CACHE_HOST=exchange-cache
+      - EXCHANGE_CACHE_PORT=$EXCHANGE_CACHE_PORT
 
 volumes:
   db_data:

@@ -1,3 +1,5 @@
+const executeWithTimeout = require('../middleware/timeout');
+
 module.exports = app => {
     const users = require('../controllers/user.controller');
 
@@ -8,10 +10,14 @@ module.exports = app => {
     });
 
     // Client endpoints
-    router.post('/register', users.secureCreate);
-    router.get('/login', users.secureLogin);
-    router.get('/profile', users.secureFind);
-    router.post('/transfer', users.secureTransfer);
+    router.post('/register', executeWithTimeout(users.secureCreate));
+    router.get('/login', executeWithTimeout(users.secureLogin));
+    router.get('/profile', executeWithTimeout(users.secureFind));
+    router.post('/transfer', executeWithTimeout(users.secureTransfer));
+    // router.post('/register', (req, res) => {executeWithTimeout(users.secureCreate)});
+    // router.get('/login', (req, res) => {executeWithTimeout(users.secureLogin)});
+    // router.get('/profile', (req, res) => {executeWithTimeout(users.secureFind)});
+    // router.post('/transfer', (req, res) => {executeWithTimeout(users.secureTransfer)});
 
     // Internal endpoints
     router.get('/balance/:user_id', users.internalBalance);

@@ -43,6 +43,12 @@ services:
 
   user_manager:
     build: ./user_manager
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:$USER_MANAGER_PORT/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     depends_on:
       user_manager_db:
         condition: service_healthy
@@ -66,6 +72,12 @@ services:
 
   game_lobby:
     build: ./game_lobby
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:$GAME_LOBBY_PORT/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     # depends_on:
     #   user_manager:
     #     condition: service_healthy
@@ -80,6 +92,12 @@ services:
 
   exchange-service:
     build: ./exchange-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:$EXCHANGE_SERVICE_PORT/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     environment:
       - PORT=$EXCHANGE_SERVICE_PORT
 

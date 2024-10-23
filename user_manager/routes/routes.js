@@ -17,5 +17,10 @@ module.exports = app => {
     router.get('/balance/:user_id', users.internalBalance);
     router.put('/balance/:user_id', users.internalUpdateBalance);
 
+    // Health check
+    router.get('/health', (req, res) => {
+        res.status(200).json({ status: 'healthy' });
+    });
+
     app.use('/', router);
 };

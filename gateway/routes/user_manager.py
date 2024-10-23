@@ -8,11 +8,10 @@ user_manager_url = app.config['USER_MANAGER_HOST'] + ':' + app.config['USER_MANA
 
 @app.route('/register', methods=['POST'])
 async def register():
-    async with AsyncClient() as client:
+    async with AsyncClient(timeout=30.0) as client:
         response = await client.request(
             method='POST',
             url=f'http://{user_manager_url}/register',
-            headers=request.headers,
             json=await request.get_json()
         )
 
@@ -21,7 +20,7 @@ async def register():
 
 @app.route('/login', methods=['GET'])
 async def login():
-    async with AsyncClient() as client:
+    async with AsyncClient(timeout=30.0) as client:
         response = await client.request(
             method='GET',
             url=f'http://{user_manager_url}/login',
@@ -33,7 +32,7 @@ async def login():
 
 @app.route('/profile', methods=['GET'])
 async def profile():
-    async with AsyncClient() as client:
+    async with AsyncClient(timeout=30.0) as client:
         response = await client.request(
             method='GET',
             url=f'http://{user_manager_url}/profile',
@@ -45,7 +44,7 @@ async def profile():
 
 @app.route('/transfer', methods=['POST'])
 async def transfer():
-    async with AsyncClient() as client:
+    async with AsyncClient(timeout=30.0) as client:
         response = await client.request(
             method='POST',
             url=f'http://{user_manager_url}/transfer',

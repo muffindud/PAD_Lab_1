@@ -10,8 +10,6 @@ services:
       interval: 2s
       timeout: 1s
       retries: 5
-    ports:
-      - "$DB_PORT:$DB_PORT"
     environment:
       - POSTGRES_USER=$DB_USER
       - POSTGRES_PASSWORD=$DB_PASS
@@ -20,9 +18,6 @@ services:
   user_manager_transfer_db:
     image: neo4j:4.2
     restart: always
-    ports:
-      - "$NEO4J_BOLT_PORT:$NEO4J_BOLT_PORT"
-      - "$NEO4J_BROWSER_PORT:$NEO4J_BROWSER_PORT"
     environment:
       - NEO4J_AUTH=neo4j/$NEO4J_PASS
     volumes:
@@ -31,10 +26,23 @@ services:
       - /var/lib/neo4j/config:/config
       - /var/lib/neo4j/plugins:/plugins
 
+  gateway:
+    build: ./gateway
+    ports:
+      - "$GATEWAY_PORT:$GATEWAY_PORT"
+    depends_on:
+      - user_manager
+      - game_lobby
+    environment:
+      - QUART_RUN_PORT=$GATEWAY_PORT
+      - QUART_RUN_HOST=0.0.0.0
+      - USER_MANAGER_HOST=user_manager
+      - USER_MANAGER_PORT=$USER_MANAGER_PORT
+      - GAME_LOBBY_HOST=game_lobby
+      - GAME_LOBBY_PORT=$GAME_LOBBY_PORT
+
   user_manager:
     build: ./user_manager
-    ports:
-      - "$USER_MANAGER_PORT:$USER_MANAGER_PORT"
     depends_on:
       user_manager_db:
         condition: service_healthy
@@ -58,8 +66,6 @@ services:
 
   game_lobby:
     build: ./game_lobby
-    ports:
-      - "$GAME_LOBBY_PORT:$GAME_LOBBY_PORT"
     # depends_on:
     #   user_manager:
     #     condition: service_healthy
@@ -74,8 +80,6 @@ services:
 
   exchange-service:
     build: ./exchange-service
-    ports:
-      - "$EXCHANGE_SERVICE_PORT:$EXCHANGE_SERVICE_PORT"
     environment:
       - PORT=$EXCHANGE_SERVICE_PORT
 

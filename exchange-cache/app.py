@@ -91,6 +91,15 @@ def post_currency():
         ), 400
 
 
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify(
+        {
+            "status": "healthy"
+        }
+    )
+
+
 @app.route('/get_all', methods=['GET'])
 def get_all():
     return jsonify(exchange_rates)

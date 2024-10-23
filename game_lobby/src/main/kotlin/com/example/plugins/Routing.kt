@@ -9,5 +9,9 @@ fun Application.configureRouting() {
         get("/") {
             call.respondText("HELLO WORLD!")
         }
+
+        get("/status") {
+            call.respond(mapOf("status" to "healthy"))
+        }
     }
 }

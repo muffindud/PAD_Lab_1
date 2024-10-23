@@ -34,8 +34,8 @@ services:
       - user_manager
       - game_lobby
     environment:
-      - FLASK_RUN_PORT=$GATEWAY_PORT
-      - FLASK_RUN_HOST=0.0.0.0
+      - QUART_RUN_PORT=$GATEWAY_PORT
+      - QUART_RUN_HOST=0.0.0.0
       - USER_MANAGER_HOST=user_manager
       - USER_MANAGER_PORT=$USER_MANAGER_PORT
       - GAME_LOBBY_HOST=game_lobby

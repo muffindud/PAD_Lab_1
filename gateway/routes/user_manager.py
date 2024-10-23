@@ -1,13 +1,13 @@
 from app import app
 from requests import post, get
-from flask import jsonify, request
+from quart import request
 
 
 user_manager_url = app.config['USER_MANAGER_HOST'] + ':' + app.config['USER_MANAGER_PORT']
 
 
 @app.route('/register', methods=['POST'])
-def register():
+async def register():
     response = post(
         url='http://' + user_manager_url + '/register',
         json=request.json
@@ -17,7 +17,7 @@ def register():
 
 
 @app.route('/login', methods=['GET'])
-def login():
+async def login():
     response = get(
         url='http://' + user_manager_url + '/login',
         json=request.json
@@ -27,7 +27,7 @@ def login():
 
 
 @app.route('/profile', methods=['GET'])
-def profile():
+async def profile():
     response = get(
         url='http://' + user_manager_url + '/profile',
         headers=request.headers
@@ -37,7 +37,7 @@ def profile():
 
 
 @app.route('/transfer', methods=['POST'])
-def transfer():
+async def transfer():
     response = post(
         url='http://' + user_manager_url + '/transfer',
         json=request.json

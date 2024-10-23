@@ -1,6 +1,6 @@
 package com.example.plugins
 
-import com.example.models.Lobby
+import com.example.game.Lobby
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.server.application.*
 import io.ktor.server.auth.*

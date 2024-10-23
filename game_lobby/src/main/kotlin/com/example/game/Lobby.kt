@@ -1,7 +1,5 @@
-package com.example.models
+package com.example.game
 
-import ch.qos.logback.core.net.server.Client
-import com.example.game.GameManager
 import io.ktor.websocket.*
 
 class Lobby {

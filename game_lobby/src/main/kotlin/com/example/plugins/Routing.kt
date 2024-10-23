@@ -10,8 +10,8 @@ fun Application.configureRouting() {
             call.respondText("HELLO WORLD!")
         }
 
-        get("/status") {
-            call.respond(mapOf("status" to "healthy"))
+        get("/health") {
+            call.respond("{\"status\": \"healthy\"}")
         }
     }
 }

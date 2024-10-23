@@ -90,8 +90,22 @@ services:
       - EXCHANGE_SERVICE_HOST=exchange-service
       - EXCHANGE_SERVICE_PORT=$EXCHANGE_SERVICE_PORT
 
+  exchange-cache:
+    build: ./exchange-cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:$EXCHANGE_CACHE_PORT/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    environment:
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_RUN_PORT=$EXCHANGE_CACHE_PORT
+
   exchange-service:
     build: ./exchange-service
+    ports:
+      - "$EXCHANGE_SERVICE_PORT:$EXCHANGE_SERVICE_PORT"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:$EXCHANGE_SERVICE_PORT/health"]
       interval: 15s
@@ -100,6 +114,8 @@ services:
       start_period: 30s
     environment:
       - PORT=$EXCHANGE_SERVICE_PORT
+      - EXCHANGE_CACHE_HOST=exchange-cache
+      - EXCHANGE_CACHE_PORT=$EXCHANGE_CACHE_PORT
 
 volumes:
   db_data:

@@ -19,12 +19,12 @@ services:
     image: neo4j:4.2
     restart: always
     environment:
-      - NEO4J_AUTH=neo4j/$NEO4J_PASS
+      - NEO4J_AUTH=${NEO4J_USER}/${NEO4J_PASS}
     volumes:
-      - /var/lib/neo4j/data:/data
-      - /var/lib/neo4j/logs:/logs
-      - /var/lib/neo4j/config:/config
-      - /var/lib/neo4j/plugins:/plugins
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_config:/config
+      - neo4j_plugins:/plugins
 
   game_lobby_logs_db:
     image: mongo:4.4
@@ -32,6 +32,8 @@ services:
     environment:
       - MONGO_INITDB_ROOT_USERNAME=$MONGO_ROOT_USER
       - MONGO_INITDB_ROOT_PASSWORD=$MONGO_ROOT_PASS
+    volumes:
+      - lobby_log:/data/db
 
   gateway:
     build: ./gateway
@@ -57,8 +59,8 @@ services:
       retries: 3
       start_period: 30s
     depends_on:
-      user_manager_db:
-        condition: service_healthy
+      - user_manager_db
+      - user_manager_transfer_db
     environment:
       - DB_HOST=user_manager_db
       - DB_PORT=$DB_PORT
@@ -133,3 +135,8 @@ services:
 
 volumes:
   db_data:
+  lobby_log:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_config:
+  neo4j_plugins:

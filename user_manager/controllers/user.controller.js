@@ -3,6 +3,7 @@ const db = require('../models');
 const User = db.users;
 const Op = db.Sequelize.Op;
 const { generateUserToken, verifyUserToken, verifyInternalToken } = require('../utils/authJwt');
+const session = require('../neo4j');
 
 User.secureCreate = async (req, res) => {
     try {
@@ -103,6 +104,15 @@ User.secureTransfer = async (req, res) => {
 
         await User.update({ balance: receiverData.balance + amount }, { where: { username: receiver } });
         await User.update({ balance: senderData.balance - amount }, { where: { username: sender } });
+        const transferResult = await session.run(
+            `
+            MERGE (from:User {username: $sender})
+            MERGE (to:User {username: $receiver})
+            CREATE (from)-[:TRANSFERRED {amount: $amount, timestamp: timestamp()}]->(to)
+            RETURN from, to
+            `,
+            { sender: sender, receiver: receiver, amount: amount }
+        );
 
         res.status(200).send({ message: 'Transfer successful.' });
     } catch (err) {

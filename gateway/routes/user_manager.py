@@ -1,6 +1,7 @@
 from app import app
 from httpx import AsyncClient
-from quart import request
+from quart import request, jsonify
+from json import loads
 
 
 user_manager_url = app.config['USER_MANAGER_HOST'] + ':' + app.config['USER_MANAGER_PORT']
@@ -15,7 +16,7 @@ async def register():
             json=await request.get_json()
         )
 
-    return response.text, response.status_code
+    return jsonify(loads(response.text)), response.status_code
 
 
 @app.route('/login', methods=['GET'])
@@ -27,7 +28,7 @@ async def login():
             json=await request.get_json()
         )
 
-    return response.text, response.status_code
+    return jsonify(loads(response.text)), response.status_code
 
 
 @app.route('/profile', methods=['GET'])
@@ -39,7 +40,7 @@ async def profile():
             headers={'Authorization': request.headers['Authorization']}
         )
 
-    return response.text, response.status_code
+    return jsonify(loads(response.text)), response.status_code
 
 
 @app.route('/transfer', methods=['POST'])
@@ -52,4 +53,16 @@ async def transfer():
             json=await request.get_json()
         )
 
-    return response.text, response.status_code
+    return jsonify(loads(response.text)), response.status_code
+
+
+@app.route('/transfer', methods=['GET'])
+async def get_transfers():
+    async with AsyncClient(timeout=30.0) as client:
+        response = await client.request(
+            method='GET',
+            url=f'http://{user_manager_url}/transfer',
+            headers={'Authorization': request.headers['Authorization']}
+        )
+
+    return jsonify(loads(response.text)), response.status_code

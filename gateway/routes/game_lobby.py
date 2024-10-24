@@ -1,7 +1,9 @@
 from app import app
 from websockets import connect as create_connection
-from quart import websocket, Websocket
+from quart import websocket, Websocket, request, jsonify
 from asyncio import gather
+from httpx import AsyncClient
+from json import loads
 
 
 game_lobby_url = app.config['GAME_LOBBY_HOST'] + ':' + app.config['GAME_LOBBY_PORT']
@@ -47,3 +49,15 @@ async def connect(id):
         client_to_lobby(websocket, lobby_sock),
         lobby_to_client(websocket, lobby_sock)
     )
+
+
+@app.route('/logs', methods=['GET'])
+async def logs():
+    async with AsyncClient(timeout=30.0) as client:
+        response = await client.request(
+            method='GET',
+            url=f'http://{game_lobby_url}/logs',
+            headers={'Authorization': request.headers['Authorization']}
+        )
+
+    return jsonify(loads(response.text)), response.status_code

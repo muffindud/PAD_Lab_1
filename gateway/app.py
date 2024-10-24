@@ -7,6 +7,8 @@ app.config['USER_MANAGER_HOST'] = environ.get('USER_MANAGER_HOST')
 app.config['USER_MANAGER_PORT'] = environ.get('USER_MANAGER_PORT')
 app.config['GAME_LOBBY_HOST'] = environ.get('GAME_LOBBY_HOST')
 app.config['GAME_LOBBY_PORT'] = environ.get('GAME_LOBBY_PORT')
+app.config['EXCHANGE_SERVICE_HOST'] = environ.get('EXCHANGE_SERVICE_HOST')
+app.config['EXCHANGE_SERVICE_PORT'] = environ.get('EXCHANGE_SERVICE_PORT')
 
 import routes.user_manager
 import routes.game_lobby

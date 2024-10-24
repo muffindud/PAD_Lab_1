@@ -49,6 +49,8 @@ services:
       - USER_MANAGER_PORT=$USER_MANAGER_PORT
       - GAME_LOBBY_HOST=game_lobby
       - GAME_LOBBY_PORT=$GAME_LOBBY_PORT
+      - EXCHANGE_SERVICE_HOST=exchange-service
+      - EXCHANGE_SERVICE_PORT=$EXCHANGE_SERVICE_PORT
 
   user_manager:
     build: ./user_manager

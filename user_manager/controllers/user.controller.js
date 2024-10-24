@@ -89,6 +89,10 @@ User.secureTransfer = async (req, res) => {
         const receiver = req.body.username;
         const amount = req.body.amount;
 
+        if (sender === receiver) {
+            return res.status(400).send({ message: 'Cannot transfer to self.' });
+        }
+
         const senderData = await User.findOne({ where: { username: sender } });
         if (!senderData) {
             return res.status(404).send({ message: 'Sender Not found.' });
@@ -102,8 +106,8 @@ User.secureTransfer = async (req, res) => {
             return res.status(404).send({ message: 'Receiver Not found.' });
         }
 
-        await User.update({ balance: receiverData.balance + amount }, { where: { username: receiver } });
-        await User.update({ balance: senderData.balance - amount }, { where: { username: sender } });
+        await User.update({ balance: parseInt(receiverData.balance) + parseInt(amount) }, { where: { username: receiver } });
+        await User.update({ balance: parseInt(senderData.balance) - parseInt(amount) }, { where: { username: sender } });
         const transferResult = await session.run(
             `
             MERGE (from:User {username: $sender})
@@ -166,6 +170,80 @@ User.internalUpdateBalance = async (req, res) => {
 
         await User.update({ balance: req.body.balance }, { where: { id: req.params.user_id } });
         res.status(200).send({ message: 'Balance updated successfully.' });
+    } catch (err) {
+        console.log(err);
+        res.status(500).send({ message: err.message });
+    }
+};
+
+User.secureGetTransferHistory = async (req, res) => {
+    if (!req.get('Authorization')) {
+        return res.status(401).send({ message: 'Unauthorized' });
+    }
+
+    try {
+        const token = req.get('Authorization').split(' ')[1];
+        const decoded = verifyUserToken(token);
+        const username = decoded.username;
+
+        const result = await session.run(
+            `
+            MATCH (user:User {username: $username})
+            OPTIONAL MATCH (user)-[outgoing:TRANSFERRED]->(recipient:User)
+            OPTIONAL MATCH (sender:User)-[incoming:TRANSFERRED]->(user)
+            RETURN user, 
+                   collect({recipient: recipient.username, amount: outgoing.amount, timestamp: outgoing.timestamp}) AS outgoingTransfers, 
+                   collect({sender: sender.username, amount: incoming.amount, timestamp: incoming.timestamp}) AS incomingTransfers
+            `,
+            { username }
+        );
+
+        if (result.records.length === 0) {
+            return res.status(404).send({ message: 'User Not found.' });
+        }
+
+        const record = result.records[0];
+        const transfers = [];
+
+        // Process outgoing transfers (positive amounts)
+        const outgoingTransfers = record.get('outgoingTransfers');
+        outgoingTransfers.forEach(transfer => {
+            if (transfer.recipient && transfer.timestamp) {
+                transfers.push({
+                    timestamp: transfer.timestamp,
+                    transfer: `${transfer.recipient} -${transfer.amount}`
+                });
+            }
+        });
+
+        // Process incoming transfers (negative amounts)
+        const incomingTransfers = record.get('incomingTransfers');
+        incomingTransfers.forEach(transfer => {
+            if (transfer.sender && transfer.timestamp) {
+                transfers.push({
+                    timestamp: transfer.timestamp,
+                    transfer: `${transfer.sender} +${transfer.amount}`
+                });
+            }
+        });
+
+        transfers.sort((a, b) => {
+            if (a.timestamp < b.timestamp) {
+                return -1;
+            }
+            if (a.timestamp > b.timestamp) {
+                return 1;
+            }
+            return 0;
+        })
+
+        res.status(200).send({
+            username: username,
+            transfers: transfers.reduce((acc, t) => {
+                acc[t.timestamp] = t.transfer;
+                return acc;
+            }, {})
+        });
     } catch (err) {
         console.log(err);
         res.status(500).send({ message: err.message });

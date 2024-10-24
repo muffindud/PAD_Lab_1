@@ -81,8 +81,6 @@ services:
 
   game_lobby:
     build: ./game_lobby
-    ports:
-      - 8000:8000
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:$GAME_LOBBY_PORT/health"]
       interval: 15s
@@ -120,8 +118,6 @@ services:
 
   exchange-service:
     build: ./exchange-service
-    ports:
-      - "$EXCHANGE_SERVICE_PORT:$EXCHANGE_SERVICE_PORT"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:$EXCHANGE_SERVICE_PORT/health"]
       interval: 15s

@@ -7,10 +7,10 @@ import org.bson.types.ObjectId
 interface GameLogRepository {
     suspend fun insertOne(gameLog: GameLog): BsonValue?
 
-    suspend fun deleteById(id: ObjectId): Long
-    suspend fun findById(id: ObjectId): GameLog?
-    suspend fun updateOne(id: ObjectId, gameLog: GameLog): Long
+    suspend fun deleteById(objectId: ObjectId): Long
+    suspend fun findById(objectId: ObjectId): GameLog?
+    suspend fun updateOne(objectId: ObjectId, gameLog: GameLog): Long
 
-    suspend fun findByLobbyId(lobbyId: ObjectId): List<GameLog>
+    suspend fun findByLobbyId(lobbyId: String): List<GameLog>
     suspend fun findByUsername(username: String): List<GameLog>
 }

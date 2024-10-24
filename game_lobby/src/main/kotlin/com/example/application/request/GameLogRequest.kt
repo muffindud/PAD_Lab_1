@@ -1,7 +1,6 @@
 package com.example.application.request
 
 import com.example.domain.entity.GameLog
-import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
 
 data class GameLogRequest(

@@ -42,12 +42,6 @@ fun Application.configureRouting() {
             get("/logs") {
                 val username = call.principal<JWTPrincipal>()?.payload?.getClaim("username")?.asString()
 
-                if (username != null) {
-                    call.respondText("User $username is accessing logs")
-                } else {
-                    call.respond(HttpStatusCode.Unauthorized, "Unauthorized")
-                }
-
                 logRepository.findByUsername(username!!)
                     .let { call.respond(it) }
             }

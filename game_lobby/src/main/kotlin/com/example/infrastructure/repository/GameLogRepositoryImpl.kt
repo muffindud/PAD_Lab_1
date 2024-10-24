@@ -83,10 +83,11 @@ class GameLogRepositoryImpl(
     override suspend fun findByUsername(username: String): List<GameLog> {
         // get all the game logs where the username is contained within the strings of the gameActions list
         try {
-            return mongoDatabase.getCollection<GameLog>(GAME_LOG_COLLECTION)
+            val result = mongoDatabase.getCollection<GameLog>(GAME_LOG_COLLECTION)
                 .withDocumentClass<GameLog>()
                 .find(Filters.regex(GameLog::gameActions.name, ".*$username.*"))
                 .toList()
+            return result
         } catch (e: MongoException) {
             System.err.println("Error: ${e.message}")
             return emptyList()

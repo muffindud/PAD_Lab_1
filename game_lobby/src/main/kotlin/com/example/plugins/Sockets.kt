@@ -1,5 +1,7 @@
 package com.example.plugins
 
+import com.example.domain.entity.GameLog
+import com.example.domain.ports.GameLogRepository
 import com.example.game.Lobby
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.server.application.*
@@ -9,10 +11,16 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.serialization.json.Json
+import org.koin.ktor.ext.inject
 import java.time.*
 
 fun Application.configureSockets() {
     val lobbies = mutableMapOf<Int, Lobby>()
+    fun deleteLobby(gameId: Int) {
+        lobbies.remove(gameId)
+    }
+
+    val logRepository by inject<GameLogRepository>()
     install(WebSockets) {
         // TODO: Adjust values
         pingPeriod = Duration.ofSeconds(15)
@@ -36,7 +44,7 @@ fun Application.configureSockets() {
                 val username = call.principal<JWTPrincipal>()?.payload?.getClaim("username")?.asString()
 
                 // save to lobby
-                lobbies.getOrPut(gameId) { Lobby() }.addClient(this)
+                lobbies.getOrPut(gameId) { Lobby(gameId.toString(), logRepository, { deleteLobby(gameId) }) }.addClient(this)
 
                 // notify other users that user joined
                 lobbies[gameId]?.broadcast("[$username] joined the lobby $gameId")

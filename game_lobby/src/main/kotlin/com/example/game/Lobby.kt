@@ -1,17 +1,30 @@
 package com.example.game
 
+import com.example.application.request.GameLogRequest
+import com.example.application.request.toDomain
+import com.example.domain.ports.GameLogRepository
 import io.ktor.websocket.*
 
-class Lobby {
+class Lobby(val lobbyId: String, val logRepository: GameLogRepository, val deleteLobbyInstanceCallback: () -> Unit) {
     val clients = mutableListOf<DefaultWebSocketSession>()
     val gameManager: GameManager = GameManager()
+    val gameLog: MutableList<String> = mutableListOf()
 
     fun addClient(client: DefaultWebSocketSession) {
         clients.add(client)
     }
 
-    fun removeClient(client: DefaultWebSocketSession) {
+    suspend fun removeClient(client: DefaultWebSocketSession) {
         clients.remove(client)
+
+        if (clients.isEmpty()) {
+            val gameLogRequest = GameLogRequest(
+                lobbyId = lobbyId,
+                gameActions = gameLog.toList()
+            )
+            val result = logRepository.insertOne(gameLogRequest.toDomain())
+            deleteLobbyInstanceCallback()
+        }
     }
 
     suspend fun handleCommand(command: String, client: DefaultWebSocketSession, username: String? = null) {
@@ -19,6 +32,7 @@ class Lobby {
         if (username == null) {
             broadcast(command)
         } else {
+            gameLog.add("$username: $command")
             broadcast("$username: $command")
         }
     }

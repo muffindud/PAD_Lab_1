@@ -26,6 +26,13 @@ services:
       - /var/lib/neo4j/config:/config
       - /var/lib/neo4j/plugins:/plugins
 
+  game_lobby_logs_db:
+    image: mongo:4.4
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=$MONGO_ROOT_USER
+      - MONGO_INITDB_ROOT_PASSWORD=$MONGO_ROOT_PASS
+
   gateway:
     build: ./gateway
     ports:
@@ -72,6 +79,8 @@ services:
 
   game_lobby:
     build: ./game_lobby
+    ports:
+      - 8000:8000
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:$GAME_LOBBY_PORT/health"]
       interval: 15s
@@ -89,6 +98,11 @@ services:
       - JWT_USER_SECRET=$USER_MANAGER_JWT_USER_SECRET
       - EXCHANGE_SERVICE_HOST=exchange-service
       - EXCHANGE_SERVICE_PORT=$EXCHANGE_SERVICE_PORT
+      - MONGO_HOST=game_lobby_logs_db
+      - MONGO_PORT=$MONGO_PORT
+      - MONGO_DB_NAME=$MONGO_DB_NAME
+      - MONGO_ROOT_USER=$MONGO_ROOT_USER
+      - MONGO_ROOT_PASS=$MONGO_ROOT_PASS
 
   exchange-cache:
     build: ./exchange-cache

@@ -42,7 +42,13 @@ services: dict = {}
 @app.route('/dicovery', methods=['GET', 'POST'])
 def discovery():
     if request.method == 'GET':
-        return jsonify(services)
+        healthy_services = {}
+        for service_name in services:
+            healthy_services[service_name] = {}
+            for service_id in services[service_name]:
+                if services[service_name][service_id]['status'] == 'healthy':
+                    healthy_services[service_name][service_id] = services[service_name][service_id]['url']
+        return jsonify(healthy_services)
 
     if request.method == 'POST':
         data = request.json

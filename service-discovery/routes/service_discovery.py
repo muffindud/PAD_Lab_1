@@ -1,46 +1,10 @@
-from app import app
+from app import app, services
 from flask import request, jsonify
 
-"""
-Example:
-    {
-        "Game Lobby": {
-            "gl1": {
-                "url": "http://game_lobby-1:8000",
-                "status": "healthy"
-            },
-            "gl2": {
-                "url": "http://game_lobby-2:8000",
-                "status": "healthy"
-            },
-            "gl3": {
-                "url": "http://game_lobby-3:8000",
-                "status": "inactive"
-            }
-        },
-        "User Manager": {
-            "um1": {
-                "url": "http://user_manager-1:3000",
-                "status": "healthy"
-            },
-            "um2": {
-                "url": "http://user_manager-2:3000",
-                "status": "inactive"
-            }
-        },
-        "Exchange Service": {
-            "es1": {
-                "url": "http://exchange_service-1:5000",
-                "status": "healthy"
-            }
-        }
-    }
-"""
-services: dict = {}
 
-
-@app.route('/dicovery', methods=['GET', 'POST'])
+@app.route('/discovery', methods=['GET', 'POST'])
 def discovery():
+    # GET the list of healthy services
     if request.method == 'GET':
         healthy_services = {}
         for service_name in services:
@@ -50,6 +14,7 @@ def discovery():
                     healthy_services[service_name][service_id] = services[service_name][service_id]['url']
         return jsonify(healthy_services)
 
+    # POST a new service
     if request.method == 'POST':
         data = request.json
 
@@ -57,18 +22,24 @@ def discovery():
         host = data.get('host')
         port = data.get('port')
 
+        # Check if the service_name is already in the services dictionary and create it if it doesn't exist
+        services[service_name] = services.get(service_name, {})
+
+        # Create a unique sequential service_id
+        # first half of each word in the service_name + the next number in the sequence
         service_id = ""
         for s in service_name.split(" "):
-            service_id += s[0].lower()
-        service_id += str(len(services.get(service_name, {})) + 1)
+            service_id += s[0:int(len(s) / 2)].lower()
+        service_id += str(int(list(services[service_name].keys())[-1][-1]) + 1) if len(services[service_name].keys()) != 0 else '0'
 
-        services[service_name] = {
-            service_id: {
-                'url': f'http://{host}:{port}',
-                'status': 'healthy'
-            }
+        # Add the service to the services dictionary
+        services[service_name][service_id] = {
+            'url': f'http://{host}:{port}',
+            'status': 'healthy',
+            'retry_count': 0
         }
 
+        # Return the service_id
         return jsonify({'message': 'Service added successfully', 'service_id': service_id}), 201
 
     else:
@@ -77,8 +48,9 @@ def discovery():
         })
 
 
-@app.route('/dicovery/<str:service_id>', methods=['GET', 'DELETE'])
+@app.route('/discovery/<string:service_id>', methods=['GET', 'DELETE'])
 def discovery_delete(service_id: str):
+    # GET one service by service_id
     if request.method == 'GET':
         for service_name in services:
             if service_id in services[service_name]:
@@ -87,6 +59,7 @@ def discovery_delete(service_id: str):
             'message': 'Service not found'
         }), 404
 
+    # DELETE a service by service_id
     if request.method == 'DELETE':
         for service_name in services:
             if service_id in services[service_name]:

@@ -1,6 +1,7 @@
 from app import app
 from websockets import connect as create_connection
 from quart import websocket, Websocket, request, jsonify
+from quart_rate_limiter import rate_limit
 from asyncio import gather
 from httpx import AsyncClient
 from json import loads
@@ -52,6 +53,7 @@ async def connect(id):
 
 
 @app.route('/logs', methods=['GET'])
+@rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def logs():
     async with AsyncClient(timeout=30.0) as client:
         response = await client.request(

@@ -1,6 +1,7 @@
 from app import app
 from httpx import AsyncClient
 from quart import request, jsonify
+from quart_rate_limiter import rate_limit
 from json import loads
 
 
@@ -8,6 +9,7 @@ user_manager_url = app.config['USER_MANAGER_HOST'] + ':' + app.config['USER_MANA
 
 
 @app.route('/register', methods=['POST'])
+@rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def register():
     async with AsyncClient(timeout=30.0) as client:
         response = await client.request(
@@ -20,6 +22,7 @@ async def register():
 
 
 @app.route('/login', methods=['GET'])
+@rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def login():
     async with AsyncClient(timeout=30.0) as client:
         response = await client.request(
@@ -32,6 +35,7 @@ async def login():
 
 
 @app.route('/profile', methods=['GET'])
+@rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def profile():
     async with AsyncClient(timeout=30.0) as client:
         response = await client.request(
@@ -44,6 +48,7 @@ async def profile():
 
 
 @app.route('/transfer', methods=['POST'])
+@rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def transfer():
     async with AsyncClient(timeout=30.0) as client:
         response = await client.request(
@@ -57,6 +62,7 @@ async def transfer():
 
 
 @app.route('/transfer', methods=['GET'])
+@rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def get_transfers():
     async with AsyncClient(timeout=30.0) as client:
         response = await client.request(

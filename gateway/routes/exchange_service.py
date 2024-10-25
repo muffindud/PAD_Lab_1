@@ -1,6 +1,7 @@
 from app import app
 from httpx import AsyncClient
 from quart import request, jsonify
+from quart_rate_limiter import rate_limit
 from json import loads
 
 
@@ -8,6 +9,7 @@ exchange_service_url = app.config['EXCHANGE_SERVICE_HOST'] + ':' + app.config['E
 
 
 @app.route('/exchange', methods=['POST'])
+@rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def exchange():
     baseCurrency = request.args.get('baseCurrency')
     targetCurrency = request.args.get('targetCurrency')

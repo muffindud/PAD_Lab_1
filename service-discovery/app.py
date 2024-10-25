@@ -5,7 +5,7 @@ from requests import get
 
 
 # The interval in seconds to check the health of the services
-HEALTH_CHECK_INTERVAL_SECONDS = 5
+HEALTH_CHECK_INTERVAL_SECONDS = 15
 
 # The maximum number of retries before removing a service from the list
 MAX_RETRY_COUNT = 3
@@ -15,35 +15,28 @@ MAX_RETRY_COUNT = 3
 Example:
     {
         "Game Lobby": {
-            "gl1": {
-                "host": "game_lobby-1:8000",
-                "status": "healthy"
-            },
-            "gl2": {
-                "host": "game_lobby-2:8000",
-                "status": "healthy"
-            },
-            "gl3": {
-                "host": "game_lobby-3:8000",
-                "status": "inactive"
+            "service_seq": 5,
+            "services": {
+                "gl0": {
+                    "host": "game_lobby-1:8000",
+                    "status": "healthy",
+                    "retry_count": 0,
+                    "checking": False
+                },
+                "gl3": {
+                    "host": "game_lobby-2:8000",
+                    "status": "healthy",
+                    "retry_count": 0,
+                    "checking": False
+                },
+                "gl4": {
+                    "host": "game_lobby-3:8000",
+                    "status": "inactive",
+                    "retry_count": 0,
+                    "checking": False
+                }
             }
         },
-        "User Manager": {
-            "um1": {
-                "host": "user_manager-1:3000",
-                "status": "healthy"
-            },
-            "um2": {
-                "host": "user_manager-2:3000",
-                "status": "inactive"
-            }
-        },
-        "Exchange Service": {
-            "es1": {
-                "host": "exchange_service-1:5000",
-                "status": "healthy"
-            }
-        }
     }
 """
 services: dict = {}
@@ -61,7 +54,7 @@ def create_app():
 
     # Check the health of a service
     def check_service(service_name, service_id, url):
-        print(f'Checking {service_name} {service_id} at {url}')
+        print(f'Checking {service_name} {service_id} at {url}\n', end='')
         try:
             services[service_name]['services'][service_id]['checking'] = True
             response = get(url + '/health')
@@ -70,34 +63,34 @@ def create_app():
                     services[service_name]['services'][service_id]['status'] = 'healthy'
                     services[service_name]['services'][service_id]['retry_count'] = 0
                     services[service_name]['services'][service_id]['checking'] = False
-                    print(f'{service_name} {service_id} is healthy')
+                    print(f'{service_name} {service_id} is healthy\n', end='')
 
             elif response.status_code == 429:
                 with data_lock:
                     services[service_name]['services'][service_id]['status'] = 'healthy'
                     services[service_name]['services'][service_id]['checking'] = False
-                    print(f'{service_name} {service_id} is healthy, but returned {response.status_code} - Too Many Requests')
+                    print(f'{service_name} {service_id} is healthy, but returned {response.status_code} - Too Many Requests\n', end='')
 
             else:
                 with data_lock:
                     services[service_name]['services'][service_id]['status'] = 'inactive'
                     services[service_name]['services'][service_id]['retry_count'] += 1
                     services[service_name]['services'][service_id]['checking'] = False
-                    print(f'{service_name} {service_id} is unhealthy status code {response.status_code}')
+                    print(f'{service_name} {service_id} is unhealthy status code {response.status_code}\n', end='')
                     if services[service_name]['services'][service_id]['retry_count'] >= MAX_RETRY_COUNT:
                         # If the service has reached the maximum number of retries, remove it from the list
                         del services[service_name]['services'][service_id]
-                        print(f'{service_name} {service_id} has reached the maximum number of retries... removing.')
+                        print(f'{service_name} {service_id} has reached the maximum number of retries... removing.\n', end='')
         except:
             with data_lock:
                 services[service_name]['services'][service_id]['status'] = 'inactive'
                 services[service_name]['services'][service_id]['retry_count'] += 1
                 services[service_name]['services'][service_id]['checking'] = False
-                print(f'{service_name} {service_id} is inactive status code pobably 500')
+                print(f'{service_name} {service_id} is inactive status code pobably 500\n', end='')
                 if services[service_name]['services'][service_id]['retry_count'] >= MAX_RETRY_COUNT:
                     # If the service has reached the maximum number of retries, remove it from the list
                     del services[service_name]['services'][service_id]
-                    print(f'{service_name} {service_id} has reached the maximum number of retries... removing.')
+                    print(f'{service_name} {service_id} has reached the maximum number of retries... removing.\n', end='')
 
     # Health check all services in parallel
     def health_check():

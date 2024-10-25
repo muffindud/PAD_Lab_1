@@ -11,7 +11,7 @@ def discovery():
             healthy_services[service_name] = {}
             for service_id in services[service_name]['services']:
                 if services[service_name]['services'][service_id]['status'] == 'healthy':
-                    healthy_services[service_name][service_id] = services[service_name]['services'][service_id]['url']
+                    healthy_services[service_name][service_id] = services[service_name]['services'][service_id]['host']
         return jsonify(healthy_services)
 
     # POST a new service
@@ -36,7 +36,7 @@ def discovery():
 
         # Add the service to the services dictionary
         services[service_name]['services'][service_id] = {
-            'url': f'http://{host}:{port}',
+            'host': f'{host}:{port}',
             'status': 'healthy',
             'retry_count': 0,
             'checking': False

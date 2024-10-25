@@ -16,31 +16,31 @@ Example:
     {
         "Game Lobby": {
             "gl1": {
-                "url": "http://game_lobby-1:8000",
+                "host": "game_lobby-1:8000",
                 "status": "healthy"
             },
             "gl2": {
-                "url": "http://game_lobby-2:8000",
+                "host": "game_lobby-2:8000",
                 "status": "healthy"
             },
             "gl3": {
-                "url": "http://game_lobby-3:8000",
+                "host": "game_lobby-3:8000",
                 "status": "inactive"
             }
         },
         "User Manager": {
             "um1": {
-                "url": "http://user_manager-1:3000",
+                "host": "user_manager-1:3000",
                 "status": "healthy"
             },
             "um2": {
-                "url": "http://user_manager-2:3000",
+                "host": "user_manager-2:3000",
                 "status": "inactive"
             }
         },
         "Exchange Service": {
             "es1": {
-                "url": "http://exchange_service-1:5000",
+                "host": "exchange_service-1:5000",
                 "status": "healthy"
             }
         }
@@ -107,7 +107,7 @@ def create_app():
             for service_name in services:
                 for service_id in services[service_name]['services']:
                     if not services[service_name]['services'][service_id]['checking']:
-                        url = services[service_name]['services'][service_id]['url']
+                        url = "http://" + services[service_name]['services'][service_id]['host']
                         # Start a new thread to check the health of the service
                         Thread(target=check_service, args=(service_name, service_id, url)).start()
 

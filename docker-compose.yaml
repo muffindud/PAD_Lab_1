@@ -35,35 +35,38 @@ services:
     volumes:
       - lobby_log:/data/db
 
+  service-discovery:
+    build: ./service-discovery
+    ports:
+      - "$SERVICE_DISCOVERY_PORT:$SERVICE_DISCOVERY_PORT"
+    environment:
+      - FLASK_RUN_PORT=$SERVICE_DISCOVERY_PORT
+      - FLASK_RUN_HOST=0.0.0.0
+      - PYTHONUNBUFFERED=1
+
   gateway:
     build: ./gateway
     ports:
       - "$GATEWAY_PORT:$GATEWAY_PORT"
     depends_on:
-      - user_manager
-      - game_lobby
+      - service-discovery
     environment:
+      - SERVICE_DISCOVERY_HOST=service-discovery
+      - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
       - QUART_RUN_PORT=$GATEWAY_PORT
       - QUART_RUN_HOST=0.0.0.0
-      - USER_MANAGER_HOST=user_manager
-      - USER_MANAGER_PORT=$USER_MANAGER_PORT
-      - GAME_LOBBY_HOST=game_lobby
-      - GAME_LOBBY_PORT=$GAME_LOBBY_PORT
-      - EXCHANGE_SERVICE_HOST=exchange-service
-      - EXCHANGE_SERVICE_PORT=$EXCHANGE_SERVICE_PORT
+      - PYTHONUNBUFFERED=1
+      - USER_JWT_SECRET=$USER_MANAGER_JWT_USER_SECRET
 
   user_manager:
     build: ./user_manager
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:$USER_MANAGER_PORT/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
     depends_on:
+      - service-discovery
       - user_manager_db
       - user_manager_transfer_db
     environment:
+      - SERVICE_DISCOVERY_HOST=service-discovery
+      - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
       - DB_HOST=user_manager_db
       - DB_PORT=$DB_PORT
       - DB_USER=$DB_USER
@@ -78,23 +81,21 @@ services:
       - PORT=$USER_MANAGER_PORT
       - JWT_USER_SECRET=$USER_MANAGER_JWT_USER_SECRET
       - JWT_INTERNAL_SECRET=$JWT_INTERNAL_SECRET
-      - EXCHANGE_SERVICE_HOST=exchange-service
-      - EXCHANGE_SERVICE_PORT=$EXCHANGE_SERVICE_PORT
+    deploy:
+      mode: replicated
+      replicas: 3
+      endpoint_mode: vip
 
   game_lobby:
     build: ./game_lobby
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:$GAME_LOBBY_PORT/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+    depends_on:
+      - service-discovery
     # depends_on:
     #   user_manager:
     #     condition: service_healthy
     environment:
-      - USER_MANAGER_HOST=user_manager
-      - USER_MANAGER_PORT=$USER_MANAGER_PORT
+      - SERVICE_DISCOVERY_HOST=service-discovery
+      - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
       - GAME_LOBBY_PORT=$GAME_LOBBY_PORT
       - JWT_INTERNAL_SECRET=$JWT_INTERNAL_SECRET
       - JWT_USER_SECRET=$USER_MANAGER_JWT_USER_SECRET
@@ -105,31 +106,32 @@ services:
       - MONGO_DB_NAME=$MONGO_DB_NAME
       - MONGO_ROOT_USER=$MONGO_ROOT_USER
       - MONGO_ROOT_PASS=$MONGO_ROOT_PASS
+    deploy:
+      mode: replicated
+      replicas: 3
+      endpoint_mode: vip
 
   exchange-cache:
     build: ./exchange-cache
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:$EXCHANGE_CACHE_PORT/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
     environment:
       - FLASK_RUN_HOST=0.0.0.0
       - FLASK_RUN_PORT=$EXCHANGE_CACHE_PORT
 
   exchange-service:
     build: ./exchange-service
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:$EXCHANGE_SERVICE_PORT/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+    depends_on:
+      - service-discovery
+      - exchange-cache
     environment:
+      - SERVICE_DISCOVERY_HOST=service-discovery
+      - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
       - PORT=$EXCHANGE_SERVICE_PORT
       - EXCHANGE_CACHE_HOST=exchange-cache
       - EXCHANGE_CACHE_PORT=$EXCHANGE_CACHE_PORT
+    deploy:
+      mode: replicated
+      replicas: 3
+      endpoint_mode: vip
 
 volumes:
   db_data:

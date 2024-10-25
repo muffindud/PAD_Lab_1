@@ -7,6 +7,9 @@ from requests import get
 # The interval in seconds to check the health of the services
 HEALTH_CHECK_INTERVAL_SECONDS = 5
 
+# The maximum number of retries before removing a service from the list
+MAX_RETRY_COUNT = 3
+
 
 """
 Example:
@@ -60,38 +63,53 @@ def create_app():
     def check_service(service_name, service_id, url):
         print(f'Checking {service_name} {service_id} at {url}')
         try:
+            services[service_name][service_id]['checking'] = True
             response = get(url + '/health')
             if response.status_code == 200:
                 with data_lock:
                     services[service_name][service_id]['status'] = 'healthy'
+                    services[service_name][service_id]['retry_count'] = 0
+                    services[service_name][service_id]['checking'] = False
                     print(f'{service_name} {service_id} is healthy')
 
             elif response.status_code == 429:
                 with data_lock:
                     services[service_name][service_id]['status'] = 'healthy'
+                    services[service_name][service_id]['checking'] = False
                     print(f'{service_name} {service_id} is healthy, but returned {response.status_code} - Too Many Requests')
 
             else:
                 with data_lock:
-                    services[service_name][service_id]['status'] = 'unhealthy'
+                    services[service_name][service_id]['status'] = 'inactive'
+                    services[service_name][service_id]['retry_count'] += 1
+                    services[service_name][service_id]['checking'] = False
                     print(f'{service_name} {service_id} is unhealthy status code {response.status_code}')
+                    if services[service_name][service_id]['retry_count'] >= MAX_RETRY_COUNT:
+                        # If the service has reached the maximum number of retries, remove it from the list
+                        del services[service_name][service_id]
+                        print(f'{service_name} {service_id} has reached the maximum number of retries... removing.')
         except:
             with data_lock:
                 services[service_name][service_id]['status'] = 'inactive'
+                services[service_name][service_id]['retry_count'] += 1
+                services[service_name][service_id]['checking'] = False
                 print(f'{service_name} {service_id} is inactive status code pobably 500')
+                if services[service_name][service_id]['retry_count'] >= MAX_RETRY_COUNT:
+                    # If the service has reached the maximum number of retries, remove it from the list
+                    del services[service_name][service_id]
+                    print(f'{service_name} {service_id} has reached the maximum number of retries... removing.')
 
     # Health check all services in parallel
     def health_check():
         global services
         global timer
         with data_lock:
-            threads = []
             for service_name in services:
                 for service_id in services[service_name]:
-                    url = services[service_name][service_id]['url']
-                    thread = Thread(target=check_service, args=(service_name, service_id, url))
-                    thread.start()
-                    threads.append(thread)
+                    if not services[service_name][service_id]['checking']:
+                        url = services[service_name][service_id]['url']
+                        # Start a new thread to check the health of the service
+                        Thread(target=check_service, args=(service_name, service_id, url)).start()
 
         timer = Timer(HEALTH_CHECK_INTERVAL_SECONDS, health_check, ())
         timer.start()

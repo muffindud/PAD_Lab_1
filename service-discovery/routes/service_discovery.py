@@ -36,7 +36,8 @@ def discovery():
         services[service_name][service_id] = {
             'url': f'http://{host}:{port}',
             'status': 'healthy',
-            'retry_count': 0
+            'retry_count': 0,
+            'checking': False
         }
 
         # Return the service_id

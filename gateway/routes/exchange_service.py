@@ -8,16 +8,17 @@ from json import loads
 exchange_service_url = app.config['EXCHANGE_SERVICE_HOST'] + ':' + app.config['EXCHANGE_SERVICE_PORT']
 
 
-@app.route('/exchange', methods=['POST'])
+@app.route('/exchange-rate', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def exchange():
-    baseCurrency = request.args.get('baseCurrency')
-    targetCurrency = request.args.get('targetCurrency')
-    async with AsyncClient(timeout=30.0) as client:
-        response = await client.request(
-            method='POST',
-            url=f'http://{exchange_service_url}/exchange',
-            json={'baseCurrency': baseCurrency, 'targetCurrency': targetCurrency}
-        )
+    if request.method == 'GET':
+        async with AsyncClient(timeout=30.0) as client:
+            response = await client.request(
+                method='GET',
+                url=f'http://{exchange_service_url}/exchange-rate/?baseCurrency={request.args.get("baseCurrency")}&targetCurrency={request.args.get("targetCurrency")}'
+            )
 
-    return jsonify(loads(response.text)), response.status_code
+        return jsonify(loads(response.text)), response.status_code
+
+    else:
+        return jsonify({'error': 'Method not allowed'}), 405

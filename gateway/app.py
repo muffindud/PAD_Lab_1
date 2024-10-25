@@ -16,12 +16,24 @@ rate_limiter = RateLimiter(app)
 app.config['RATE_LIMIT'] = 5
 app.config['RATE_LIMIT_PERIOD'] = timedelta(seconds=1)
 
+app.config['USER_JWT_SECRET'] = environ['USER_JWT_SECRET']
+
 service_discovery_url = f'http://{environ["SERVICE_DISCOVERY_HOST"]}:{environ["SERVICE_DISCOVERY_PORT"]}'
 service_id = ""
 
 service_registry = {}
 service_registry_lock = Lock()
 registry_updater_task = None
+
+
+def get_service_registry(service_name: str=None) -> dict:
+    global service_registry
+    global service_registry_lock
+
+    with service_registry_lock:
+        if service_name:
+            return service_registry.get(service_name, {})
+        return service_registry
 
 
 async def get_services():
@@ -87,9 +99,9 @@ async def health():
     return jsonify({'status': 'healthy'}), 200
 
 
-# import routes.user_manager
-# import routes.game_lobby
-# import routes.exchange_service
+import routes.user_manager
+import routes.game_lobby
+import routes.exchange_service
 
 
 register(lambda: None)

@@ -73,8 +73,26 @@ def discovery():
 
 @app.route('/dicovery/<str:service_id>', methods=['GET', 'DELETE'])
 def discovery_delete(service_id: str):
-    if request.method == 'DELETE':
-        # remove a service from the list of active services
+    if request.method == 'GET':
+        for service_name in services:
+            if service_id in services[service_name]:
+                return jsonify(services[service_name][service_id])
         return jsonify({
-            'message': 'DELETE request received'
+            'message': 'Service not found'
+        }), 404
+
+    if request.method == 'DELETE':
+        for service_name in services:
+            if service_id in services[service_name]:
+                services[service_name][service_id]['status'] = 'inactive'
+            return jsonify({
+                'message': f'Service {service_id} set to inactive'
+            })
+        return jsonify({
+            'message': 'Service not found'
+        }), 404
+
+    else:
+        return jsonify({
+            'message': 'Invalid request'
         })

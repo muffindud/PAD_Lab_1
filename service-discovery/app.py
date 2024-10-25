@@ -63,40 +63,40 @@ def create_app():
     def check_service(service_name, service_id, url):
         print(f'Checking {service_name} {service_id} at {url}')
         try:
-            services[service_name][service_id]['checking'] = True
+            services[service_name]['services'][service_id]['checking'] = True
             response = get(url + '/health')
             if response.status_code == 200:
                 with data_lock:
-                    services[service_name][service_id]['status'] = 'healthy'
-                    services[service_name][service_id]['retry_count'] = 0
-                    services[service_name][service_id]['checking'] = False
+                    services[service_name]['services'][service_id]['status'] = 'healthy'
+                    services[service_name]['services'][service_id]['retry_count'] = 0
+                    services[service_name]['services'][service_id]['checking'] = False
                     print(f'{service_name} {service_id} is healthy')
 
             elif response.status_code == 429:
                 with data_lock:
-                    services[service_name][service_id]['status'] = 'healthy'
-                    services[service_name][service_id]['checking'] = False
+                    services[service_name]['services'][service_id]['status'] = 'healthy'
+                    services[service_name]['services'][service_id]['checking'] = False
                     print(f'{service_name} {service_id} is healthy, but returned {response.status_code} - Too Many Requests')
 
             else:
                 with data_lock:
-                    services[service_name][service_id]['status'] = 'inactive'
-                    services[service_name][service_id]['retry_count'] += 1
-                    services[service_name][service_id]['checking'] = False
+                    services[service_name]['services'][service_id]['status'] = 'inactive'
+                    services[service_name]['services'][service_id]['retry_count'] += 1
+                    services[service_name]['services'][service_id]['checking'] = False
                     print(f'{service_name} {service_id} is unhealthy status code {response.status_code}')
-                    if services[service_name][service_id]['retry_count'] >= MAX_RETRY_COUNT:
+                    if services[service_name]['services'][service_id]['retry_count'] >= MAX_RETRY_COUNT:
                         # If the service has reached the maximum number of retries, remove it from the list
-                        del services[service_name][service_id]
+                        del services[service_name]['services'][service_id]
                         print(f'{service_name} {service_id} has reached the maximum number of retries... removing.')
         except:
             with data_lock:
-                services[service_name][service_id]['status'] = 'inactive'
-                services[service_name][service_id]['retry_count'] += 1
-                services[service_name][service_id]['checking'] = False
+                services[service_name]['services'][service_id]['status'] = 'inactive'
+                services[service_name]['services'][service_id]['retry_count'] += 1
+                services[service_name]['services'][service_id]['checking'] = False
                 print(f'{service_name} {service_id} is inactive status code pobably 500')
-                if services[service_name][service_id]['retry_count'] >= MAX_RETRY_COUNT:
+                if services[service_name]['services'][service_id]['retry_count'] >= MAX_RETRY_COUNT:
                     # If the service has reached the maximum number of retries, remove it from the list
-                    del services[service_name][service_id]
+                    del services[service_name]['services'][service_id]
                     print(f'{service_name} {service_id} has reached the maximum number of retries... removing.')
 
     # Health check all services in parallel
@@ -105,9 +105,9 @@ def create_app():
         global timer
         with data_lock:
             for service_name in services:
-                for service_id in services[service_name]:
-                    if not services[service_name][service_id]['checking']:
-                        url = services[service_name][service_id]['url']
+                for service_id in services[service_name]['services']:
+                    if not services[service_name]['services'][service_id]['checking']:
+                        url = services[service_name]['services'][service_id]['url']
                         # Start a new thread to check the health of the service
                         Thread(target=check_service, args=(service_name, service_id, url)).start()
 

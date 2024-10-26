@@ -1,5 +1,6 @@
 from app import app, get_service_registry
-from httpx import AsyncClient
+from src.request_form import handle_request
+
 from quart import request, jsonify
 from quart_rate_limiter import rate_limit
 from json import loads
@@ -33,113 +34,143 @@ def get_round_robin_exchange_service() -> str:
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def register():
     host = get_round_robin_exchange_service()
+    initial_host = host
 
     if host is None:
         return jsonify({'error': 'No user manager services available'}), 503
 
-    async with AsyncClient(timeout=30.0) as client:
-        response = await client.request(
-            method='POST',
-            url=f'http://{host}/register',
-            json=await request.get_json()
-        )
+    if request.method == 'POST':
+        while True:
+            response, status_code = await handle_request(
+                f'http://{host}/register',
+                request.method,
+                json=await request.get_json()
+            )
 
-    try:
-        r = jsonify(loads(response.text)), response.status_code
-    except Exception as e:
-        r = response.text, response.status_code
+            if status_code // 100 == 2:
+                return jsonify(loads(response)), status_code
 
-    return r
+            print(f'No response, from {host}, trying another service...')
+            host = get_round_robin_exchange_service()
+            if host == initial_host:
+                return jsonify({'error': 'No user manager services available'}), 503
+
+    else:
+        return jsonify({'error': 'Invalid request method'}), 400
 
 
 @app.route('/login', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def login():
     host = get_round_robin_exchange_service()
+    initial_host = host
 
     if host is None:
         return jsonify({'error': 'No user manager services available'}), 503
 
-    async with AsyncClient(timeout=30.0) as client:
-        response = await client.request(
-            method='GET',
-            url=f'http://{host}/login',
-            json=await request.get_json()
-        )
+    if request.method == 'GET':
+        while True:
+            response, status_code = await handle_request(
+                f'http://{host}/login',
+                request.method,
+                headers={'Authorization': request.headers['Authorization']}
+            )
 
-    try:
-        r = jsonify(loads(response.text)), response.status_code
-    except Exception as e:
-        r = response.text, response.status_code
+            if status_code // 100 == 2:
+                return jsonify(loads(response)), status_code
 
-    return r
+            print(f'No response, from {host}, trying another service...')
+            host = get_round_robin_exchange_service()
+            if host == initial_host:
+                return jsonify({'error': 'No user manager services available'}), 503
+
+    else:
+        return jsonify({'error': 'Invalid request method'}), 400
 
 
 @app.route('/profile', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def profile():
     host = get_round_robin_exchange_service()
+    initial_host = host
 
     if host is None:
         return jsonify({'error': 'No user manager services available'}), 503
 
-    async with AsyncClient(timeout=30.0) as client:
-        response = await client.request(
-            method='GET',
-            url=f'http://{host}/profile',
-            headers={'Authorization': request.headers['Authorization']}
-        )
+    if request.method == 'GET':
+        while True:
+            response, status_code = await handle_request(
+                f'http://{host}/profile',
+                request.method,
+                headers={'Authorization': request.headers['Authorization']}
+            )
 
-    try:
-        r = jsonify(loads(response.text)), response.status_code
-    except Exception as e:
-        r = response.text, response.status_code
+            if status_code // 100 == 2:
+                return jsonify(response), status_code
 
-    return r
+            print(f'No response, from {host}, trying another service...')
+            host = get_round_robin_exchange_service()
+            if host == initial_host:
+                return jsonify({'error': 'No user manager services available'}), 503
+
+    else:
+        return jsonify({'error': 'Invalid request method'}), 400
 
 
 @app.route('/transfer', methods=['POST'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def transfer():
     host = get_round_robin_exchange_service()
+    initial_host = host
 
     if host is None:
         return jsonify({'error': 'No user manager services available'}), 503
 
-    async with AsyncClient(timeout=30.0) as client:
-        response = await client.request(
-            method='POST',
-            url=f'http://{host}/transfer',
-            headers={'Authorization': request.headers['Authorization']},
-            json=await request.get_json()
-        )
+    if request.method == 'POST':
+        while True:
+            response, status_code = await handle_request(
+                f'http://{host}/transfer',
+                request.method,
+                headers={'Authorization': request.headers['Authorization']},
+                json=await request.get_json()
+            )
 
-    try:
-        r = jsonify(loads(response.text)), response.status_code
-    except Exception as e:
-        r = response.text, response.status_code
+            if status_code // 100 == 2:
+                return jsonify(response), status_code
 
-    return r
+            print(f'No response, from {host}, trying another service...')
+            host = get_round_robin_exchange_service()
+            if host == initial_host:
+                return jsonify({'error': 'No user manager services available'}), 503
+
+    else:
+        return jsonify({'error': 'Invalid request method'}), 400
 
 
 @app.route('/transfer', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def get_transfers():
     host = get_round_robin_exchange_service()
+    initial_host = host
 
     if host is None:
         return jsonify({'error': 'No user manager services available'}), 503
 
-    async with AsyncClient(timeout=30.0) as client:
-        response = await client.request(
-            method='GET',
-            url=f'http://{host}/transfer',
-            headers={'Authorization': request.headers['Authorization']}
-        )
+    if request.method == 'GET':
+        while True:
+            response, status_code = await handle_request(
+                f'http://{host}/transfer',
+                request.method,
+                headers={'Authorization': request.headers['Authorization']}
+            )
 
-    try:
-        r = jsonify(loads(response.text)), response.status_code
-    except Exception as e:
-        r = response.text, response.status_code
+            if status_code // 100 == 2:
+                return jsonify(response), status_code
 
-    return r
+            print(f'No response, from {host}, trying another service...')
+            host = get_round_robin_exchange_service()
+            if host == initial_host:
+                return jsonify({'error': 'No user manager services available'}), 503
+
+    else:
+        return jsonify({'error': 'Invalid request method'}), 400

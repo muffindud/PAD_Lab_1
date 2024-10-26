@@ -18,7 +18,7 @@ suspend fun <T> executeWithTimeout(block: suspend () -> T): T {
     }
 }
 
-fun Application.configureRouting() {
+fun Application.configureRouting(getActiveLobbies: () -> MutableMap<Int, List<String>>) {
     val logRepository by inject<GameLogRepository>()
 
     routing {
@@ -27,7 +27,6 @@ fun Application.configureRouting() {
         }
 
         get("/health") {
-            // call.respond("{\"status\": \"healthy\"}")
             try {
                 val result = executeWithTimeout {
                     "{\"status\": \"healthy\"}"
@@ -44,6 +43,21 @@ fun Application.configureRouting() {
 
                 logRepository.findByUsername(username!!)
                     .let { call.respond(it) }
+            }
+        }
+
+        authenticate("server_jwt") {
+            get("/lobby") {
+                val server = call.principal<JWTPrincipal>()?.payload?.getClaim("server")?.asString()
+
+                if (server == "Gateway") {
+                    call.respond(
+                        HttpStatusCode.OK,
+                        getActiveLobbies().map { (lobbyId, players) -> lobbyId to players }.toMap()
+                    )
+                } else {
+                    call.respond(HttpStatusCode.Forbidden)
+                }
             }
         }
     }

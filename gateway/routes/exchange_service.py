@@ -3,7 +3,6 @@ from src.request_form import handle_request
 
 from quart import request, jsonify
 from quart_rate_limiter import rate_limit
-from json import loads
 
 
 round_robin_index = 0
@@ -42,12 +41,12 @@ async def exchange():
     if request.method == 'GET':
         while True:
             response, status_code = await handle_request(
-                f'http://{host}/exchange-rate/?baseCurrency={request.args.get("baseCurrency")}&targetCurrency={request.args.get("targetCurrency")}',
-                request.method
+                url=f'http://{host}/exchange-rate/?baseCurrency={request.args.get("baseCurrency")}&targetCurrency={request.args.get("targetCurrency")}',
+                method=request.method
             )
 
             if status_code // 100 == 2:
-                return jsonify(loads(response)), status_code
+                return jsonify(response), status_code
 
             print(f'No response, from {host}, trying another service...')
             host = get_round_robin_exchange_service()

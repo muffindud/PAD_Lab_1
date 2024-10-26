@@ -42,13 +42,13 @@ async def register():
     if request.method == 'POST':
         while True:
             response, status_code = await handle_request(
-                f'http://{host}/register',
-                request.method,
+                url=f'http://{host}/register',
+                method=request.method,
                 json=await request.get_json()
             )
 
             if status_code // 100 == 2:
-                return jsonify(loads(response)), status_code
+                return jsonify(response), status_code
 
             print(f'No response, from {host}, trying another service...')
             host = get_round_robin_exchange_service()
@@ -63,6 +63,7 @@ async def register():
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def login():
     host = get_round_robin_exchange_service()
+    print(host)
     initial_host = host
 
     if host is None:
@@ -71,13 +72,13 @@ async def login():
     if request.method == 'GET':
         while True:
             response, status_code = await handle_request(
-                f'http://{host}/login',
-                request.method,
-                headers={'Authorization': request.headers['Authorization']}
+                url=f'http://{host}/login',
+                method=request.method,
+                json=await request.get_json()
             )
 
             if status_code // 100 == 2:
-                return jsonify(loads(response)), status_code
+                return jsonify(response), status_code
 
             print(f'No response, from {host}, trying another service...')
             host = get_round_robin_exchange_service()
@@ -100,8 +101,8 @@ async def profile():
     if request.method == 'GET':
         while True:
             response, status_code = await handle_request(
-                f'http://{host}/profile',
-                request.method,
+                url=f'http://{host}/profile',
+                method=request.method,
                 headers={'Authorization': request.headers['Authorization']}
             )
 
@@ -129,8 +130,8 @@ async def transfer():
     if request.method == 'POST':
         while True:
             response, status_code = await handle_request(
-                f'http://{host}/transfer',
-                request.method,
+                url=f'http://{host}/transfer',
+                method=request.method,
                 headers={'Authorization': request.headers['Authorization']},
                 json=await request.get_json()
             )
@@ -159,8 +160,8 @@ async def get_transfers():
     if request.method == 'GET':
         while True:
             response, status_code = await handle_request(
-                f'http://{host}/transfer',
-                request.method,
+                url=f'http://{host}/transfer',
+                method=request.method,
                 headers={'Authorization': request.headers['Authorization']}
             )
 

@@ -1,12 +1,9 @@
 from app import app, get_service_registry
 from src.request_form import handle_request
 
-from websockets import connect as create_connection
-from quart import websocket, Websocket, request, jsonify
+from quart import request, jsonify
 from quart_rate_limiter import rate_limit
-from asyncio import gather
 from httpx import AsyncClient, get
-from json import loads
 from jwt import encode, decode
 
 
@@ -213,12 +210,13 @@ async def logs():
     if request.method == 'GET':
         while True:
             response, status_code = await handle_request(
-                f'http://{host}/logs',
-                request.method
+                url=f'http://{host}/logs',
+                method=request.method,
+                headers={'Authorization': request.headers['Authorization']}
             )
 
             if status_code // 100 == 2:
-                return jsonify(loads(response)), status_code
+                return jsonify(response), status_code
 
             print(f'No response, from {host}, trying another service...')
             host = get_round_robin_game_lobby_service()

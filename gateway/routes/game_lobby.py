@@ -1,4 +1,6 @@
 from app import app, get_service_registry
+from src.request_form import handle_request
+
 from websockets import connect as create_connection
 from quart import websocket, Websocket, request, jsonify
 from quart_rate_limiter import rate_limit
@@ -173,10 +175,12 @@ def get_lobby_host(lobby_id: int) -> str:
         lobbies = get_lobby(f'http://{host}/lobby')
         if not lobbies:
             continue
-        if lobby_id in lobbies['lobbies'].keys():
+        if str(lobby_id) in lobbies['lobbies'].keys():
             return lobbies['port']
 
-    return get_lobby(f'http://{get_round_robin_game_lobby_service()}/lobby')['port']
+    l = get_lobby(f'http://{get_round_robin_game_lobby_service()}/lobby')
+    print(l)
+    return l['port']
 
 
 @app.route('/connect/<int:id>', methods=['GET'])
@@ -185,7 +189,7 @@ async def connect(id):
     auth_header = request.headers.get('Authorization')
     username = decode(auth_header.split(' ')[1], algorithms='HS256', key=app.config['USER_JWT_SECRET'])['username']
 
-    port = await get_lobby_host(id)
+    port = get_lobby_host(id)
 
     if not port:
         return jsonify({'error': 'No game lobby services available'}), 503
@@ -208,13 +212,13 @@ async def logs():
 
     if request.method == 'GET':
         while True:
-            response, status = await handle_request(
+            response, status_code = await handle_request(
                 f'http://{host}/logs',
                 request.method
             )
 
-            if response.status_code // 100 == 2:
-                return jsonify(loads(response)), status
+            if status_code // 100 == 2:
+                return jsonify(loads(response)), status_code
 
             print(f'No response, from {host}, trying another service...')
             host = get_round_robin_game_lobby_service()

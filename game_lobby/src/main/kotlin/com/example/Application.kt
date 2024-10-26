@@ -7,10 +7,6 @@ import io.ktor.server.netty.*
 
 val game_lobby_port = System.getenv("GAME_LOBBY_PORT").toInt()
 
-// TODO: Get from service discovery
-//val user_manager_host = System.getenv("USER_MANAGER_HOST")
-//val user_manager_port = System.getenv("USER_MANAGER_PORT").toInt()
-
 val jwt_internal_secret = System.getenv("JWT_INTERNAL_SECRET")
 val jwt_user_secret = System.getenv("JWT_USER_SECRET")
 val mongo_uri = "mongodb://${System.getenv("MONGO_ROOT_USER")}:${System.getenv("MONGO_ROOT_PASS")}@${System.getenv("MONGO_HOST")}:${System.getenv("MONGO_PORT")}"

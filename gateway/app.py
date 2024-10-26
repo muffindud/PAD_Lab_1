@@ -17,6 +17,7 @@ app.config['RATE_LIMIT'] = 5
 app.config['RATE_LIMIT_PERIOD'] = timedelta(seconds=1)
 
 app.config['USER_JWT_SECRET'] = environ['USER_JWT_SECRET']
+app.config['INTERNAL_JWT_SECRET'] = environ['INTERNAL_JWT_SECRET']
 
 service_discovery_url = f'http://{environ["SERVICE_DISCOVERY_HOST"]}:{environ["SERVICE_DISCOVERY_PORT"]}'
 service_id = ""

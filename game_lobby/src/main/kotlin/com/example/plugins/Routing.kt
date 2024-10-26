@@ -49,11 +49,20 @@ fun Application.configureRouting(getActiveLobbies: () -> MutableMap<Int, List<St
         authenticate("server_jwt") {
             get("/lobby") {
                 val server = call.principal<JWTPrincipal>()?.payload?.getClaim("server")?.asString()
+                val activeLobbies = getActiveLobbies().map { (lobbyId, players) -> lobbyId to players }.toMap()
+
+                /*
+                  create a body for the response
+                    {
+                        "port": getContainerPort(),
+                        "lobbies": activeLobbies
+                 */
+                val body = "{\"port\": ${getContainerPort()}, \"lobbies\": $activeLobbies}"
 
                 if (server == "Gateway") {
                     call.respond(
                         HttpStatusCode.OK,
-                        getActiveLobbies().map { (lobbyId, players) -> lobbyId to players }.toMap()
+                        body
                     )
                 } else {
                     call.respond(HttpStatusCode.Forbidden)

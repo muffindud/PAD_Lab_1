@@ -50,6 +50,9 @@ services:
       - "$GATEWAY_PORT:$GATEWAY_PORT"
     depends_on:
       - service-discovery
+    volumes:
+      - //./pipe/docker_engine://./pipe/docker_engine
+    user: "appuser"
     environment:
       - SERVICE_DISCOVERY_HOST=service-discovery
       - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
@@ -57,6 +60,8 @@ services:
       - QUART_RUN_HOST=0.0.0.0
       - PYTHONUNBUFFERED=1
       - USER_JWT_SECRET=$USER_MANAGER_JWT_USER_SECRET
+      - INTERNAL_JWT_SECRET=$JWT_INTERNAL_SECRET
+      - DOCKER_HOST=unix:///var/run/docker.sock
 
   user_manager:
     build: ./user_manager
@@ -88,8 +93,13 @@ services:
 
   game_lobby:
     build: ./game_lobby
+    ports:
+      - $GAME_LOBBY_PORT
     depends_on:
       - service-discovery
+    volumes:
+      - //./pipe/docker_engine://./pipe/docker_engine
+    user: "appuser"
     # depends_on:
     #   user_manager:
     #     condition: service_healthy
@@ -106,6 +116,7 @@ services:
       - MONGO_DB_NAME=$MONGO_DB_NAME
       - MONGO_ROOT_USER=$MONGO_ROOT_USER
       - MONGO_ROOT_PASS=$MONGO_ROOT_PASS
+      - DOCKER_HOST=unix:///var/run/docker.sock
     deploy:
       mode: replicated
       replicas: 3

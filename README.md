@@ -47,85 +47,15 @@
     * `GET /status` - Returns the status of the service.
 * **Game Lobby**:
     * User endpoints:
-        * `rpc /join` - Join a game.
+        * `ws /connect/<lobby_id>` - Join a game.
             * Request headers:
             ```
             ...
             Authorization: Bearer <token>
             ...
             ```
-            * Response body 200:
-            ```json
-            {
-                "message": "Game joined"
-            }
-            ```
-            * Response body 401 (missing or bad token):
-            ```json
-            {
-                "message": "Unauthorized"
-            }
-            ```
-        * `rpc /bet` - Place a bet in the game.
-            * Request headers:
-            ```
-            ...
-            Authorization: Bearer <token>
-            ...
-            ```
-            * Request body:
-            ```json
-            "amount": "number"
-            ```
-            * Response body 200:
-            ```json
-            {
-                "message": "Bet successful"
-            }
-            ```
-            * Response body 400:
-            ```json
-            {
-                "message": "Invalid bet"
-            }
-            ```
-            * Response body 401 (missing or bad token):
-            ```json
-            {
-                "message": "Unauthorized"
-            }
-            ```
-        * `rpc /action` - Perform an action in the game [stand, hit, split, double down].
-            * Request headers:
-            ```
-            ...
-            Authorization: Bearer <token>
-            ...
-            ```
-            * Request body:
-            ```json
-            "action": "string"
-            ```
-            * Response body 200:
-            ```json
-            {
-                "message": "Action successful"
-            }
-            ```
-            * Response body 400:
-            ```json
-            {
-                "message": "Invalid action"
-            }
-            ```
-
-        * `rpc /leave` - Leave the game.
-            * Request headers:
-            ```
-            ...
-            Authorization: Bearer <token>
-            ...
-            ```
+            * Success: Open a WebSocket connection to the game lobby no. `lobby_id`.
+            * Unauthorized: Close the connection (missing or expired token).
 
 * **User Manager**:
     * User endpoints:
@@ -232,7 +162,7 @@
             }
             ```
     * Game endpoints (for the **Game Lobby** service secured with a different token):
-        * `GET /balance/user_id=<user_id>` - Get the user's balance.
+        * `GET /balance/<user_id>` - Get the user's balance.
             * Request headers:
             ```
             ...
@@ -257,7 +187,7 @@
                 "message": "User not found"
             }
             ```
-        * `PUT /balance/user_id=<user_id>` - Update the user's balance.
+        * `PUT /balance/<user_id>` - Update the user's balance.
             * Request headers:
             ```
             ...
@@ -289,6 +219,23 @@
             }
             ```
 
+* Exchange Service:
+    * Exchange rate endpoints:
+        * `GET /api/exchange-rate?baseCurrency=<bc>&targetCurrency=<tc>`
+            * Response body 200:
+            ```json
+            {
+                "baseCurrency": "string",
+                "targetCurrency": "string",
+                "exchangeRate": "number"
+            }
+            ```
+            * Response body 400:
+            ```json
+            {
+                "message": "Invalid currency"
+            }
+            ```
 
 ## Deployment and Scaling
 * Each service will be deployed using *Docker*.

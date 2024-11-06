@@ -1,7 +1,6 @@
 services:
   user_manager_db:
     image: postgres:13
-    restart: always
     user: ${DB_USER}
     volumes:
       - db_data:/var/lib/postgresql/data
@@ -17,7 +16,6 @@ services:
 
   user_manager_transfer_db:
     image: neo4j:4.2
-    restart: always
     environment:
       - NEO4J_AUTH=${NEO4J_USER}/${NEO4J_PASS}
     volumes:
@@ -28,7 +26,6 @@ services:
 
   game_lobby_logs_db:
     image: mongo:4.4
-    restart: always
     environment:
       - MONGO_INITDB_ROOT_USERNAME=$MONGO_ROOT_USER
       - MONGO_INITDB_ROOT_PASSWORD=$MONGO_ROOT_PASS

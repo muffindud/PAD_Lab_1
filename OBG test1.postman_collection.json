@@ -1,0 +1,279 @@
+{
+	"info": {
+		"_postman_id": "0c5e7217-228d-4552-a97f-c434652d2826",
+		"name": "OBG test1",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "29606335"
+	},
+	"item": [
+		{
+			"name": "Register",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Parse the response JSON\r",
+							"let response = pm.response.json();\r",
+							"\r",
+							"// Check if the 'token' key exists in the response\r",
+							"if (response.token) {\r",
+							"    // Set the collection variable 'user_jwt' with the token value\r",
+							"    pm.collectionVariables.set(\"user_jwt\", response.token);\r",
+							"    console.log(\"Token saved to collection variable 'user_jwt':\", response.token);\r",
+							"} else {\r",
+							"    console.error(\"Token not found in response\");\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"username\": \"{{username}}\",\r\n    \"password\": \"{{password}}\",\r\n    \"email\": \"test1@example.com\",\r\n    \"balance\": 11111\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{host}}/register",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Login",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Parse the response JSON\r",
+							"let response = pm.response.json();\r",
+							"\r",
+							"// Check if the 'token' key exists in the response\r",
+							"if (response.token) {\r",
+							"    // Set the collection variable 'user_jwt' with the token value\r",
+							"    pm.collectionVariables.set(\"user_jwt\", response.token);\r",
+							"    console.log(\"Token saved to collection variable 'user_jwt':\", response.token);\r",
+							"} else {\r",
+							"    console.error(\"Token not found in response\");\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"username\": \"{{username}}\",\r\n    \"password\": \"{{password}}\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{host}}/login",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Profile",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{user_jwt}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{host}}/profile",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"profile"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Transfer",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{user_jwt}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"username\": \"test2\",\r\n    \"amount\": 552\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{host}}/transfer",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"transfer"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Logs",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{user_jwt}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{host}}/logs",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"logs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Transfer",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{user_jwt}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{host}}/transfer",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"transfer"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Exchange Rate",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{host}}/exchange-rate?baseCurrency=eur&targetCurrency=mdl",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"exchange-rate"
+					],
+					"query": [
+						{
+							"key": "baseCurrency",
+							"value": "eur"
+						},
+						{
+							"key": "targetCurrency",
+							"value": "mdl"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Service Discovery",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:4000/discovery",
+					"host": [
+						"localhost"
+					],
+					"port": "4000",
+					"path": [
+						"discovery"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "host",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": "user_jwt",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": "username",
+			"value": "test1",
+			"type": "default"
+		},
+		{
+			"key": "password",
+			"value": "pass1",
+			"type": "default"
+		}
+	]
+}

@@ -37,10 +37,18 @@
 * **Exchange Service**: JavaScript - Remote service that will be used to get the latest exchange rates for the game.
 
 #### Databases:
-* **User SQL Database**: PostgreSQL
+* **User SQL Database** (replicated): PostgreSQL
 * **Transfers Graph Database**: Neo4j
-* **Log NoSQL Database**: MongoDB
+* **Log NoSQL Database** (replicated): MongoDB
 * **Exchange Cache**: Python (Flask)
+
+#### Data Warehousing:
+* **ETL**: Python (pandas, SQLAlchemy)
+* **Data Warehouse**: PostgreSQL
+
+#### Monitoring:
+* **Prometheus**: Collects metrics from the services.
+* **Grafana**: Visualizes the metrics collected by Prometheus.
 
 ## Data Management
 * Health (all services):

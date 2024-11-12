@@ -41,7 +41,7 @@ async def exchange():
         async with AsyncClient(timeout=30.0) as client:
             response = await client.request(
                 method='GET',
-                url=f'http://{host}/exchange-rate/?baseCurrency={request.args.get("baseCurrency")}&targetCurrency={request.args.get("targetCurrency")}'
+                url=f'http://{host}/api/exchange-rate/?baseCurrency={request.args.get("baseCurrency")}&targetCurrency={request.args.get("targetCurrency")}'
             )
 
         try:

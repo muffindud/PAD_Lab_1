@@ -1,14 +1,12 @@
 from app import app, get_service_registry
 from src.request_handler import handle_request
 
-from httpx import AsyncClient
 from quart import request, jsonify
 from quart_rate_limiter import rate_limit
 from json import loads
-from pybreaker import CircuitBreaker, CircuitBreakerError
 
 
-exchange_service_breaker = CircuitBreaker(fail_max=app.config['FAIL_MAX'], reset_timeout=app.config['RESET_TIMEOUT'])
+# exchange_service_breaker = CircuitBreaker(fail_max=app.config['FAIL_MAX'], reset_timeout=app.config['RESET_TIMEOUT'])
 service_name = 'Exchange Service'
 
 round_robin_index = 0
@@ -66,8 +64,14 @@ def get_round_robin_exchange_service() -> str:
 async def exchange():
     if request.method == 'GET':
         try:
-            response = await exchange_service_breaker.call(
-                func=handle_request,
+            # response = await exchange_service_breaker.call(
+            #     func=handle_request,
+            #     path=f'/api/exchange-rate/?baseCurrency={request.args.get("baseCurrency")}&targetCurrency={request.args.get("targetCurrency")}',
+            #     method='GET',
+            #     host_get=get_round_robin_exchange_service,
+            #     service_name=service_name
+            # )
+            response = await handle_request(
                 path=f'/api/exchange-rate/?baseCurrency={request.args.get("baseCurrency")}&targetCurrency={request.args.get("targetCurrency")}',
                 method='GET',
                 host_get=get_round_robin_exchange_service,
@@ -75,8 +79,11 @@ async def exchange():
             )
             return jsonify(loads(response.text)), response.status_code
 
-        except CircuitBreakerError as e:
-            return jsonify({'error': 'Circuit breaker open'}), 503
+        # except CircuitBreakerError as e:
+        #     return jsonify({'error': 'Circuit breaker open'}), 503
+        except Exception as e:
+            print(f'Failed to handle request: {e}')
+            return jsonify({'error': f'Failed to handle request: {e}'}), 503
 
     else:
         return jsonify({'error': 'Method not allowed'}), 405

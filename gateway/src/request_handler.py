@@ -1,28 +1,63 @@
-from app import app, remove_service
+from app import app, remove_service, get_service_registry
 
-from httpx import AsyncClient, Response
+from httpx import AsyncClient, Response, ConnectError
 
+class CircuitBreakerError(Exception):
+    pass
 
 async def handle_request(path: str, method: str, host_get: callable, service_name: str, headers: dict=None, data: dict=None) -> Response:
-    try:
+    # try:
+    #     host = host_get()
+
+    #     if host is None:
+    #         return Response(503, json={'error': f'No {service_name} services available'})
+
+    #     async with AsyncClient(timeout=30.0) as client:
+    #         response = await client.request(
+    #             method=method,
+    #             url=f"http://{host}{path}",
+    #             headers=headers,
+    #             json=data
+    #         )
+
+    #     if response.status_code < 500:
+    #         return response
+
+    #     response.raise_for_status()
+
+    # except Exception as e:
+    #     print(f'Failed to handle request on {host}: {e}')
+    #     # TODO: See if sleeping here is necessary
+
+    # remove_service(host, service_name)
+    # raise ConnectError(f'Failed to handle request on {host}')
+
+    initial_host = None
+    while True:
         host = host_get()
 
         if host is None:
             return Response(503, json={'error': f'No {service_name} services available'})
 
+        if host == initial_host:
+            raise CircuitBreakerError(f'No {service_name} services available')
+
+        initial_host = host if initial_host is None else initial_host
+
         for i in range(app.config['MAX_RETRIES']):
-            async with AsyncClient(timeout=30.0) as client:
-                response = await client.request(
-                    method=method,
-                    url=f"http://{host}{path}",
-                    headers=headers,
-                    json=data
-                )
+            try:
+                async with AsyncClient(timeout=30.0) as client:
+                    response = await client.request(
+                        method=method,
+                        url=f"http://{host}{path}",
+                        headers=headers,
+                        json=data
+                    )
 
-            if response.status_code < 500:
-                return response
+                if response.status_code < 500:
+                    return response
 
-        await remove_service(host, service_name)
+                response.raise_for_status()
 
-    except Exception as e:
-        print(f'Request failed at {host}: {e}')
+            except ConnectError as e:
+                print(f'Failed to handle request on {host}: {e}')

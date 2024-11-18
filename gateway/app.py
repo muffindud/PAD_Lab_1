@@ -18,7 +18,7 @@ app.config['RATE_LIMIT_PERIOD'] = timedelta(seconds=1)
 
 app.config['MAX_RETRIES'] = 3
 app.config['FAIL_MAX'] = 3
-app.config['RESET_TIMEOUT'] = 10
+app.config['RESET_TIMEOUT'] = 30
 
 app.config['USER_JWT_SECRET'] = environ['USER_JWT_SECRET']
 

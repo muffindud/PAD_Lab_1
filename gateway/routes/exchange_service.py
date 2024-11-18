@@ -1,14 +1,20 @@
 from app import app, get_service_registry
+from src.request_handler import handle_request
+
 from httpx import AsyncClient
 from quart import request, jsonify
 from quart_rate_limiter import rate_limit
 from json import loads
+from pybreaker import CircuitBreaker, CircuitBreakerError
 
+
+exchange_service_breaker = CircuitBreaker(fail_max=app.config['FAIL_MAX'], reset_timeout=app.config['RESET_TIMEOUT'])
+service_name = 'Exchange Service'
 
 round_robin_index = 0
 def get_round_robin_exchange_service() -> str:
     global round_robin_index
-    service_registry = get_service_registry('Exchange Service')
+    service_registry = get_service_registry(service_name)
 
     # If there are no exchange services, return None
     if len(service_registry) == 0:
@@ -29,27 +35,48 @@ def get_round_robin_exchange_service() -> str:
     return host
 
 
+# @app.route('/exchange-rate', methods=['GET'])
+# @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
+# async def exchange():
+#     host = get_round_robin_exchange_service()
+
+#     if host is None:
+#         return jsonify({'error': 'No exchange services available'}), 503
+
+#     if request.method == 'GET':
+#         async with AsyncClient(timeout=30.0) as client:
+#             response = await client.request(
+#                 method='GET',
+#                 url=f'http://{host}/api/exchange-rate/?baseCurrency={request.args.get("baseCurrency")}&targetCurrency={request.args.get("targetCurrency")}'
+#             )
+
+#         try:
+#             r = jsonify(loads(response.text)), response.status_code
+#         except Exception as e:
+#             r = response.text, response.status_code
+
+#         return r
+
+#     else:
+#         return jsonify({'error': 'Method not allowed'}), 405
+
+
 @app.route('/exchange-rate', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def exchange():
-    host = get_round_robin_exchange_service()
-
-    if host is None:
-        return jsonify({'error': 'No exchange services available'}), 503
-
     if request.method == 'GET':
-        async with AsyncClient(timeout=30.0) as client:
-            response = await client.request(
-                method='GET',
-                url=f'http://{host}/api/exchange-rate/?baseCurrency={request.args.get("baseCurrency")}&targetCurrency={request.args.get("targetCurrency")}'
-            )
-
         try:
-            r = jsonify(loads(response.text)), response.status_code
-        except Exception as e:
-            r = response.text, response.status_code
+            response = await exchange_service_breaker.call(
+                func=handle_request,
+                path=f'/api/exchange-rate/?baseCurrency={request.args.get("baseCurrency")}&targetCurrency={request.args.get("targetCurrency")}',
+                method='GET',
+                host_get=get_round_robin_exchange_service,
+                service_name=service_name
+            )
+            return jsonify(loads(response.text)), response.status_code
 
-        return r
+        except CircuitBreakerError as e:
+            return jsonify({'error': 'Circuit breaker open'}), 503
 
     else:
         return jsonify({'error': 'Method not allowed'}), 405

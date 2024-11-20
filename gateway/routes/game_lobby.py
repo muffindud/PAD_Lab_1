@@ -6,8 +6,9 @@ from quart import websocket, Websocket, request, jsonify
 from quart_rate_limiter import rate_limit
 from asyncio import gather
 from json import loads
-from jwt import decode
+from jwt import decode, encode
 from pybreaker import CircuitBreaker, CircuitBreakerError
+from httpx import get
 
 
 game_lobby_breaker = CircuitBreaker(fail_max=app.config['FAIL_MAX'], reset_timeout=app.config['RESET_TIMEOUT'])
@@ -129,7 +130,7 @@ async def lobby_to_client(client_sock: Websocket, lobby_sock):
         await client_sock.close(err_code)
 
 
-@app.websocket('/connect/<int:id>')
+@app.websocket('/lobby/<int:id>')
 async def connect(id):
     auth_header = websocket.headers.get('Authorization')
     # username = decode(auth_header.split(' ')[1], options={"verify_signature": False}, algorithms=['HS256'])['username']
@@ -158,6 +159,51 @@ async def connect(id):
         client_to_lobby(websocket, lobby_sock),
         lobby_to_client(websocket, lobby_sock)
     )
+
+
+def get_lobby(url: str) -> dict:
+    try:
+        token = encode({'server': 'Gateway'}, app.config['INTERNAL_JWT_SECRET'], algorithm='HS256')
+        response = get(url, headers={'Authorization': f'Bearer {token}'})
+        if response.status_code != 200:
+            return {}
+        return response.json()
+    except Exception as e:
+        print(f'Error getting lobbies {url}: {e}')
+        return {}
+
+
+def get_lobby_host(lobby_id: int) -> str:
+    game_lobbies = get_service_registry('Game Lobby')
+    for _, host in game_lobbies.items():
+        lobbies = get_lobby(f'http://{host}/lobby')
+        if not lobbies:
+            continue
+        if str(lobby_id) in lobbies['lobbies'].keys():
+            return lobbies['port']
+
+    host = get_round_robin_game_lobby_service()
+    l = get_lobby(f'http://{host}/lobby')
+    print(l)
+    return l['port']
+
+
+@app.route('/connect/<int:id>', methods=['GET'])
+@rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
+async def get_connect(id):
+    auth_header = request.headers['Authorization']
+    username = decode(auth_header.split(' ')[1], algorithms='HS256', key=app.config['USER_JWT_SECRET'])['username']
+
+    port = get_lobby_host(id)
+
+    if not port:
+        return jsonify({'error': 'No lobbies available'}), 503
+
+    return jsonify(
+        {
+            'url': f'ws://{app.config["GAME_LOBBY_HOST"]}:{port}/connect/{id}'
+        }
+    ), 200
 
 
 @app.route('/logs', methods=['GET'])

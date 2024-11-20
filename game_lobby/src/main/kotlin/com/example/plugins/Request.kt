@@ -15,6 +15,9 @@ import java.net.InetAddress
 @Serializable
 data class ServiceDiscoveryResponse(val service_id: String, val message: String)
 
+@Serializable
+data class ServiceDiscoveryPort(val port: Int)
+
 val client = HttpClient(CIO) {
     install(ContentNegotiation) {
         json(Json {
@@ -42,4 +45,16 @@ suspend fun registerService(serviceDiscoveryUrl: String, port: Int): String
     val responseJson: ServiceDiscoveryResponse = response.body()
 
     return responseJson.service_id
+}
+
+suspend fun getPort(serviceDiscoveryUrl: String): Int
+{
+    println("Requesting port from service discovery")
+    val response: HttpResponse = client.get(urlString = "${serviceDiscoveryUrl}/get_lobby_port") {
+        contentType(ContentType.Application.Json)
+    }
+
+    val responseJson: ServiceDiscoveryPort = response.body()
+
+    return responseJson.port
 }

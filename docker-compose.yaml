@@ -40,6 +40,7 @@ services:
       - FLASK_RUN_PORT=$SERVICE_DISCOVERY_PORT
       - FLASK_RUN_HOST=0.0.0.0
       - PYTHONUNBUFFERED=1
+      - GAME_LOBBY_PORT=$GAME_LOBBY_PORT
 
   gateway:
     build: ./gateway
@@ -54,6 +55,8 @@ services:
       - QUART_RUN_HOST=0.0.0.0
       - PYTHONUNBUFFERED=1
       - USER_JWT_SECRET=$USER_MANAGER_JWT_USER_SECRET
+      - INTERNAL_JWT_SECRET=$JWT_INTERNAL_SECRET
+      - GAME_LOBBY_HOST=$GAME_LOBBY_HOST
 
   user_manager:
     build: ./user_manager
@@ -87,6 +90,8 @@ services:
     build: ./game_lobby
     depends_on:
       - service-discovery
+    ports:
+      - 5000-5002:5000
     # depends_on:
     #   user_manager:
     #     condition: service_healthy

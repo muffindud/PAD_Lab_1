@@ -1,9 +1,6 @@
-from app import app, remove_service, get_service_registry
+from app import app
 
 from httpx import AsyncClient, Response, ConnectError
-
-class CircuitBreakerError(Exception):
-    pass
 
 class NoServiceError(Exception):
     pass

@@ -59,6 +59,9 @@ User.secureFind = async (req, res) => {
 
     try {
         const token = req.get('Authorization').split(' ')[1];
+        if (!token) {
+            return res.status(401).send({ message: 'Unauthorized' });
+        }
         const decoded = verifyUserToken(token);
 
         const user = await User.findOne({ where: { username: decoded.username } });

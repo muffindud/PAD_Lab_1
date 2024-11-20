@@ -16,6 +16,10 @@ rate_limiter = RateLimiter(app)
 app.config['RATE_LIMIT'] = 5
 app.config['RATE_LIMIT_PERIOD'] = timedelta(seconds=1)
 
+app.config['MAX_RETRIES'] = 3
+app.config['FAIL_MAX'] = 3
+app.config['RESET_TIMEOUT'] = 30
+
 app.config['USER_JWT_SECRET'] = environ['USER_JWT_SECRET']
 
 service_discovery_url = f'http://{environ["SERVICE_DISCOVERY_HOST"]}:{environ["SERVICE_DISCOVERY_PORT"]}'
@@ -34,6 +38,27 @@ def get_service_registry(service_name: str=None) -> dict:
         if service_name:
             return service_registry.get(service_name, {})
         return service_registry
+
+
+async def remove_service(service_host: str, service_name: str):
+    global service_registry
+    global service_registry_lock
+
+    s_id = None
+
+    with service_registry_lock:
+        for service_id, host in service_registry[service_name].items():
+            if host == service_host:
+                del service_registry[service_name][service_id]
+                s_id = service_id
+                break
+
+    if s_id:
+        async with AsyncClient(timeout=30.0) as client:
+            await client.request(
+                method='DELETE',
+                url=f'{service_discovery_url}/discovery/{s_id}'
+            )
 
 
 async def get_services():

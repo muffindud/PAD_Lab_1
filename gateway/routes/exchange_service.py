@@ -1,11 +1,10 @@
 from app import app, get_service_registry
-from src.request_handler import handle_request, NoServiceError
+from src.request_handler import handle_request, NoServiceError, ServiceError
 
 from quart import request, jsonify
 from quart_rate_limiter import rate_limit
 from json import loads
 from pybreaker import CircuitBreaker, CircuitBreakerError
-from httpx import ConnectError
 
 
 exchange_service_breaker = CircuitBreaker(fail_max=app.config['FAIL_MAX'], reset_timeout=app.config['RESET_TIMEOUT'])
@@ -66,7 +65,7 @@ def get_round_robin_exchange_service() -> str:
 async def exchange():
     if request.method == 'GET':
         try:
-            response = await exchange_service_breaker.call(
+            response = await exchange_service_breaker.call_async(
                 func=handle_request,
                 path=f'/api/exchange-rate/?baseCurrency={request.args.get("baseCurrency")}&targetCurrency={request.args.get("targetCurrency")}',
                 method='GET',
@@ -84,7 +83,7 @@ async def exchange():
         except NoServiceError:
             return jsonify({'error': f'No {service_name} services available'}), 503
 
-        except ConnectError:
+        except ServiceError:
             return jsonify({'error': f'Failed to handle request on {service_name} services'}), 503
 
         except CircuitBreakerError:

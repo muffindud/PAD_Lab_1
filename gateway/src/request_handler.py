@@ -8,6 +8,9 @@ class CircuitBreakerError(Exception):
 class NoServiceError(Exception):
     pass
 
+class ServiceError(Exception):
+    pass
+
 async def handle_request(path: str, method: str, host_get: callable, service_name: str, headers: dict=None, data: dict=None) -> Response:
     # try:
     #     host = host_get()
@@ -43,7 +46,7 @@ async def handle_request(path: str, method: str, host_get: callable, service_nam
             raise NoServiceError(f'No {service_name} services available')
 
         if host == initial_host:
-            raise ConnectError(f'Failed to handle request on {service_name} services.')
+            raise ServiceError(f'Failed to handle request on {service_name} services.')
 
         initial_host = host if initial_host is None else initial_host
 

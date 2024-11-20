@@ -55,7 +55,8 @@ services:
       - QUART_RUN_HOST=0.0.0.0
       - PYTHONUNBUFFERED=1
       - USER_JWT_SECRET=$USER_MANAGER_JWT_USER_SECRET
-      - HOST=$HOST
+      - INTERNAL_JWT_SECRET=$JWT_INTERNAL_SECRET
+      - GAME_LOBBY_HOST=$GAME_LOBBY_HOST
 
   user_manager:
     build: ./user_manager

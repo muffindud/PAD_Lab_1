@@ -37,9 +37,9 @@ fun Application.configureRouting(externalPort: Int, getActiveLobbies: () -> Muta
             }
         }
 
-        get("/external") {
-            call.respond("{\"port\": $externalPort}")
-        }
+//        get("/external") {
+//            call.respond("{\"port\": $externalPort}")
+//        }
 
         authenticate("user_jwt") {
             get("/logs") {
@@ -67,7 +67,7 @@ fun Application.configureRouting(externalPort: Int, getActiveLobbies: () -> Muta
                         "port": getContainerPort(),
                         "lobbies": activeLobbies
                  */
-                val body = "{\"port\": \"${System.getenv("GAME_LOBBY_PORT")}\", \"lobbies\": $activeLobbiesJson}"
+                val body = "{\"port\": \"${externalPort}\", \"lobbies\": $activeLobbiesJson}"
                 if (server == "Gateway") {
                     call.respond(
                         HttpStatusCode.OK,

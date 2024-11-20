@@ -55,6 +55,7 @@ services:
       - QUART_RUN_HOST=0.0.0.0
       - PYTHONUNBUFFERED=1
       - USER_JWT_SECRET=$USER_MANAGER_JWT_USER_SECRET
+      - HOST=$HOST
 
   user_manager:
     build: ./user_manager

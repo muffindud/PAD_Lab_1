@@ -1,8 +1,10 @@
 from app import app, services
 from flask import request, jsonify
 from os import environ
+from threading import Lock
 
 
+game_lobby_free_port_lock = Lock()
 game_lobby_free_port: int = int(environ['GAME_LOBBY_PORT'])
 
 
@@ -60,8 +62,9 @@ def discovery():
 def get_lobby_port():
     if request.method == 'GET':
         global game_lobby_free_port
-        port = game_lobby_free_port
-        game_lobby_free_port += 1
+        with game_lobby_free_port_lock:
+            port = game_lobby_free_port
+            game_lobby_free_port += 1
         return jsonify({'port': port})
 
     else:

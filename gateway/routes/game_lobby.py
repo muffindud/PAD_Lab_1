@@ -8,6 +8,7 @@ from asyncio import gather
 from json import loads
 from jwt import decode, encode
 from pybreaker import CircuitBreaker, CircuitBreakerError
+from httpx import get
 
 
 game_lobby_breaker = CircuitBreaker(fail_max=app.config['FAIL_MAX'], reset_timeout=app.config['RESET_TIMEOUT'])
@@ -181,25 +182,26 @@ def get_lobby_host(lobby_id: int) -> str:
         if str(lobby_id) in lobbies['lobbies'].keys():
             return lobbies['port']
 
-    l = get_lobby(f'http://{get_round_robin_game_lobby_service()}/lobby')
+    host = get_round_robin_game_lobby_service()
+    l = get_lobby(f'http://{host}/lobby')
     print(l)
     return l['port']
 
 
 @app.route('/connect/<int:id>', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
-async def connect(id):
+async def get_connect(id):
     auth_header = request.headers['Authorization']
     username = decode(auth_header.split(' ')[1], algorithms='HS256', key=app.config['USER_JWT_SECRET'])['username']
-    
+
     port = get_lobby_host(id)
-    
+
     if not port:
         return jsonify({'error': 'No lobbies available'}), 503
-    
+
     return jsonify(
         {
-            'url': f'ws://{app.config['HOST']}:{port}/connect/{id}',
+            'url': f'ws://{app.config["GAME_LOBBY_HOST"]}:{port}/connect/{id}'
         }
     ), 200
 

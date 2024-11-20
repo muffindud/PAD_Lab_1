@@ -19,7 +19,12 @@ val service_discovery_url = "http://${System.getenv("SERVICE_DISCOVERY_HOST")}:$
 
 var serviceId: String = ""
 
+const val serviceName: String = "Game Lobby"
+
+var externalPort: Int = 0
+
 suspend fun main(args: Array<String>) {
+    externalPort = getPort(service_discovery_url)
     serviceId = registerService(service_discovery_url, game_lobby_port)
     embeddedServer(
         Netty,
@@ -35,5 +40,5 @@ fun Application.module() {
     configureSecurity(jwt_user_secret, jwt_internal_secret)
     configureSockets()
     configureMonitoring()
-    configureRouting()
+    configureRouting(externalPort)
 }

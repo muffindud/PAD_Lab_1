@@ -18,7 +18,7 @@ suspend fun <T> executeWithTimeout(block: suspend () -> T): T {
     }
 }
 
-fun Application.configureRouting() {
+fun Application.configureRouting(externalPort: Int) {
     val logRepository by inject<GameLogRepository>()
 
     routing {
@@ -36,6 +36,10 @@ fun Application.configureRouting() {
             } catch (e: TimeoutCancellationException) {
                 call.respond(HttpStatusCode.RequestTimeout, "{\"status\": \"unhealthy\"}")
             }
+        }
+
+        get("/external") {
+            call.respond("{\"port\": $externalPort}")
         }
 
         authenticate("user_jwt") {

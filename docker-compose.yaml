@@ -89,7 +89,7 @@ services:
     depends_on:
       - service-discovery
     ports:
-      - "5000-5002:5000-5002"
+      - 5000-5002:5000
     # depends_on:
     #   user_manager:
     #     condition: service_healthy

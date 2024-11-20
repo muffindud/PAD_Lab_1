@@ -18,7 +18,7 @@ suspend fun <T> executeWithTimeout(block: suspend () -> T): T {
     }
 }
 
-fun Application.configureRouting(externalPort: Int) {
+fun Application.configureRouting(externalPort: Int, getActiveLobbies: () -> MutableMap<Int, List<String>>) {
     val logRepository by inject<GameLogRepository>()
 
     routing {
@@ -27,7 +27,6 @@ fun Application.configureRouting(externalPort: Int) {
         }
 
         get("/health") {
-            // call.respond("{\"status\": \"healthy\"}")
             try {
                 val result = executeWithTimeout {
                     "{\"status\": \"healthy\"}"
@@ -48,6 +47,35 @@ fun Application.configureRouting(externalPort: Int) {
 
                 logRepository.findByUsername(username!!)
                     .let { call.respond(it) }
+            }
+        }
+
+        authenticate("server_jwt") {
+            get("/lobby") {
+                val server = call.principal<JWTPrincipal>()?.payload?.getClaim("server")?.asString()
+                val activeLobbies = getActiveLobbies().map { (lobbyId, players) -> lobbyId to players }.toMap()
+                // format activeLobbies to a json string like this: {1: ["player1", "player2"], 2: ["player3", "player4"]}
+                val activeLobbiesJson = activeLobbies.entries.joinToString(
+                    prefix = "{",
+                    postfix = "}",
+                    separator = ",",
+                    transform = { (lobbyId, players) -> "\"$lobbyId\": ${players.map { "\"$it\"" }.joinToString(prefix = "[", postfix = "]")}" }
+                )
+                /*
+                  create a body for the response
+                    {
+                        "port": getContainerPort(),
+                        "lobbies": activeLobbies
+                 */
+                val body = "{\"port\": \"${System.getenv("GAME_LOBBY_PORT")}\", \"lobbies\": $activeLobbiesJson}"
+                if (server == "Gateway") {
+                    call.respond(
+                        HttpStatusCode.OK,
+                        body
+                    )
+                } else {
+                    call.respond(HttpStatusCode.Forbidden)
+                }
             }
         }
     }

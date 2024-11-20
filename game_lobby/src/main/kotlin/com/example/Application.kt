@@ -38,7 +38,7 @@ suspend fun main(args: Array<String>) {
 fun Application.module() {
     configureMongo(mongo_uri, mongo_name)
     configureSecurity(jwt_user_secret, jwt_internal_secret)
-    configureSockets()
+    val getActiveLobbies: () -> MutableMap<Int, List<String>> = configureSockets()
     configureMonitoring()
-    configureRouting(externalPort)
+    configureRouting(externalPort, { getActiveLobbies() })
 }

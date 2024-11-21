@@ -8,6 +8,7 @@ import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.principal
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 import org.koin.ktor.ext.inject
@@ -18,7 +19,7 @@ suspend fun <T> executeWithTimeout(block: suspend () -> T): T {
     }
 }
 
-fun Application.configureRouting(externalPort: Int, getActiveLobbies: () -> MutableMap<Int, List<String>>) {
+fun Application.configureRouting(externalPort: Int, appMicrometerRegistry: PrometheusMeterRegistry, getActiveLobbies: () -> MutableMap<Int, List<String>>) {
     val logRepository by inject<GameLogRepository>()
 
     routing {
@@ -35,6 +36,10 @@ fun Application.configureRouting(externalPort: Int, getActiveLobbies: () -> Muta
             } catch (e: TimeoutCancellationException) {
                 call.respond(HttpStatusCode.RequestTimeout, "{\"status\": \"unhealthy\"}")
             }
+        }
+
+        get("/metrics") {
+            call.respond(appMicrometerRegistry.scrape())
         }
 
 //        get("/external") {

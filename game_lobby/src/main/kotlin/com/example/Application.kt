@@ -4,6 +4,7 @@ import com.example.plugins.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 
 val game_lobby_port = System.getenv("GAME_LOBBY_PORT").toInt()
 
@@ -37,8 +38,9 @@ suspend fun main(args: Array<String>) {
 
 fun Application.module() {
     configureMongo(mongo_uri, mongo_name)
+    val appMicrometerRegistry: PrometheusMeterRegistry = configureMetrics()
     configureSecurity(jwt_user_secret, jwt_internal_secret)
     val getActiveLobbies: () -> MutableMap<Int, List<String>> = configureSockets()
     configureMonitoring()
-    configureRouting(externalPort, { getActiveLobbies() })
+    configureRouting(externalPort, appMicrometerRegistry, { getActiveLobbies() })
 }

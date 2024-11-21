@@ -1,0 +1,39 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "gateway"
+    static_configs:
+      - targets:
+          - "gateway-1:8080"
+
+  - job_name: "service-discovery"
+    static_configs:
+      - targets:
+          - "service-discovery-1:4000"
+
+  - job_name: "game-lobby"
+    static_configs:
+      - targets:
+          - "game_lobby-1:5000"
+          - "game_lobby-2:5000"
+          - "game_lobby-3:5000"
+
+  - job_name: "user-manager"
+    static_configs:
+      - targets:
+          - "user_manager-1:3000"
+          - "user_manager-2:3000"
+          - "user_manager-3:3000"
+
+  - job_name: "exchange-service"
+    static_configs:
+      - targets:
+          - "exchange-service-1:3001"
+          - "exchange-service-2:3001"
+          - "exchange-service-3:3001"
+
+  - job_name: "exchange-cache"
+    static_configs:
+      - targets:
+          - "exchange-cache-1:3002"

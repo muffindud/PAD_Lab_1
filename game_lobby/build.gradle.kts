@@ -42,6 +42,6 @@ dependencies {
     testImplementation("io.ktor:ktor-server-test-host-jvm")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
-    implementation("io.ktor:ktor-server-metrics-micrometer-jvm")
+    implementation("io.ktor:ktor-server-metrics-micrometer")
     implementation("io.micrometer:micrometer-registry-prometheus:latest.release")
 }

@@ -10,4 +10,6 @@ fun Application.configureMetrics(): PrometheusMeterRegistry {
     install(MicrometerMetrics) {
         registry = appMicrometerRegistry
     }
+
+    return appMicrometerRegistry
 }

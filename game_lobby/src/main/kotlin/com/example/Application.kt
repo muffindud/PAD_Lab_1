@@ -5,8 +5,9 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import kotlinx.coroutines.runBlocking
 
-val game_lobby_port = System.getenv("GAME_LOBBY_PORT").toInt()
+var game_lobby_port = System.getenv("GAME_LOBBY_PORT").toInt()
 
 // TODO: Get from service discovery
 //val user_manager_host = System.getenv("USER_MANAGER_HOST")
@@ -25,8 +26,11 @@ const val serviceName: String = "Game Lobby"
 var externalPort: Int = 0
 
 suspend fun main(args: Array<String>) {
-    externalPort = getPort(service_discovery_url)
+    externalPort = getExternalPort()
     serviceId = registerService(service_discovery_url, game_lobby_port)
+
+    println("Starting on external port: $externalPort")
+
     embeddedServer(
         Netty,
         port = game_lobby_port,

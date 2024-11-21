@@ -141,8 +141,21 @@ services:
       - "$PROMETHEUS_PORT:$PROMETHEUS_PORT"
     volumes:
       - ./prometheus.yaml:/etc/prometheus/prometheus.yaml
+      - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yaml'
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "$GRAFANA_PORT:3000"
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_USER=$GRAFANA_USER
+      - GF_SECURITY_ADMIN_PASSWORD=$GRAFANA_PASS
+    volumes:
+      - grafana_data:/var/lib/grafana
 
 volumes:
   db_data:
@@ -151,3 +164,5 @@ volumes:
   neo4j_logs:
   neo4j_config:
   neo4j_plugins:
+  prometheus_data:
+  grafana_data:

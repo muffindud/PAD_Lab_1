@@ -1,5 +1,5 @@
 import asyncio
-from quart import Quart, jsonify
+from quart import Quart, jsonify, request
 from quart_rate_limiter import RateLimiter, rate_limit
 from os import environ
 from datetime import timedelta
@@ -7,10 +7,12 @@ from httpx import AsyncClient
 from socket import gethostname
 from threading import Lock
 from atexit import register
+from aioprometheus import REGISTRY, Counter, render
 
 UPDATE_PERIOD = 15  # seconds
 
 app = Quart(__name__)
+app.events_counter = Counter('events', 'Number of events received by the Gateway')
 
 rate_limiter = RateLimiter(app)
 app.config['RATE_LIMIT'] = 5
@@ -125,6 +127,12 @@ async def shutdown():
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def health():
     return jsonify({'status': 'healthy'}), 200
+
+
+@app.route('/metrics', methods=['GET'])
+async def metrics():
+    content, http_headers = render(REGISTRY, request.headers.getlist('accept'))
+    return content, http_headers
 
 
 import routes.user_manager

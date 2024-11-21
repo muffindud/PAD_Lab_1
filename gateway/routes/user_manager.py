@@ -38,6 +38,7 @@ def get_round_robin_user_manager() -> str:
 @app.route('/register', methods=['POST'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def register():
+    app.events_counter.inc({'path': '/register'})
     try:
         response = await user_manager_breaker.call_async(
             func=handle_request,
@@ -66,6 +67,7 @@ async def register():
 @app.route('/login', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def login():
+    app.events_counter.inc({'path': '/login'})
     try:
         response = await user_manager_breaker.call_async(
             func=handle_request,
@@ -95,6 +97,7 @@ async def login():
 @app.route('/profile', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def profile():
+    app.events_counter.inc({'path': '/profile'})
     try:
         response = await user_manager_breaker.call_async(
             func=handle_request,
@@ -125,6 +128,7 @@ async def profile():
 @app.route('/transfer', methods=['POST'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def transfer():
+    app.events_counter.inc({'path': '/transfer'})
     try:
         response = await user_manager_breaker.call_async(
             func=handle_request,
@@ -154,6 +158,7 @@ async def transfer():
 @app.route('/transfer', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def get_transfers():
+    app.events_counter.inc({'path': '/transfer'})
     try:
         response = await user_manager_breaker.call_async(
             func=handle_request,

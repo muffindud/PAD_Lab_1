@@ -63,6 +63,7 @@ def get_round_robin_exchange_service() -> str:
 @app.route('/exchange-rate', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def exchange():
+    app.events_counter.inc({'path': '/exchange-rate'})
     if request.method == 'GET':
         try:
             response = await exchange_service_breaker.call_async(

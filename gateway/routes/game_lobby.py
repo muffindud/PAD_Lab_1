@@ -191,6 +191,7 @@ def get_lobby_host(lobby_id: int) -> str:
 @app.route('/connect/<int:id>', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def get_connect(id):
+    app.events_counter.inc({'path': '/connect'})
     auth_header = request.headers['Authorization']
     username = decode(auth_header.split(' ')[1], algorithms='HS256', key=app.config['USER_JWT_SECRET'])['username']
 
@@ -209,6 +210,7 @@ async def get_connect(id):
 @app.route('/logs', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def logs():
+    app.events_counter.inc({'path': '/logs'})
     try:
         response = await game_lobby_breaker.call_async(
             func=handle_request,

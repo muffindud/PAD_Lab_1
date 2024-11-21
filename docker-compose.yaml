@@ -86,7 +86,7 @@ services:
       replicas: 3
       endpoint_mode: vip
 
-  game_lobby-1:
+  game_lobby:
     build: ./game_lobby
     depends_on:
       - service-discovery

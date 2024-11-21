@@ -1,5 +1,5 @@
 import asyncio
-from quart import Quart, jsonify
+from quart import Quart, jsonify, request
 from quart_rate_limiter import RateLimiter, rate_limit
 from os import environ
 from datetime import timedelta
@@ -7,10 +7,17 @@ from httpx import AsyncClient
 from socket import gethostname
 from threading import Lock
 from atexit import register
+from aioprometheus import Counter, MetricsMiddleware
+from aioprometheus.asgi.quart import metrics
 
 UPDATE_PERIOD = 15  # seconds
 
 app = Quart(__name__)
+
+app.events_couter = Counter('http_requests_total', 'Total HTTP Requests')
+
+app.asgi_app = MetricsMiddleware(app.asgi_app)
+app.add_url_rule('/metrics', 'metrics', metrics, methods=['GET'])
 
 rate_limiter = RateLimiter(app)
 app.config['RATE_LIMIT'] = 5
@@ -107,6 +114,18 @@ async def startup():
     # Start the registry update loop
     global registry_updater_task
     registry_updater_task = asyncio.create_task(update_registry())
+
+
+# @app.before_request
+# async def before_request():
+#     http_request_total.inc({'method': request.method, 'endpoint': request.path, 'status': 'in-progress'})
+
+
+# @app.after_request
+# async def after_request(response):
+#     http_request_total.inc({'method': request.method, 'endpoint': request.path, 'status': response.status_code})
+#     logger.info(f'{request.method} {request.path} - {response.status_code}')
+#     return response
 
 
 @app.after_serving

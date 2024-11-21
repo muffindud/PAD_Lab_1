@@ -125,3 +125,4 @@ def create_app():
 
 app = create_app()
 import routes.service_discovery
+import routes.targets

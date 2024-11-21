@@ -139,6 +139,12 @@ services:
     image: prom/prometheus
     ports:
       - "$PROMETHEUS_PORT:$PROMETHEUS_PORT"
+    depends_on:
+      - service-discovery
+      - gateway
+      - user_manager
+      - game_lobby
+      - exchange-service
     volumes:
       - ./prometheus.yaml:/etc/prometheus/prometheus.yaml
       - prometheus_data:/prometheus

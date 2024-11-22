@@ -71,7 +71,7 @@ suspend fun getExternalPort(): Int {
     }
 
     val responseJson: String = response.bodyAsText()
-
+    
 //    val port = Regex("\"HostPort\":\"(\\d+)\"").find(responseJson)?.groupValues?.get(1)?.toInt()
     val regex = Regex("\"HostPort\":\"(\\d+)\"")
 
@@ -84,16 +84,18 @@ suspend fun getExternalPort(): Int {
     return externalPort
 }
 
-fun getContainerId(): String? {
-    val cgroupFile = File("/proc/self/cgroup")
-    if (cgroupFile.exists()) {
-        val lines = cgroupFile.readLines()
-        for (line in lines) {
-            if (line.contains("docker")) {
-                val parts = line.split("/")
-                return parts.lastOrNull() // The last part should be the container ID
-            }
-        }
-    }
-    return null // Not running in a Docker container
+fun getContainerId(): String {
+//    val cgroupFile = File("/proc/self/cgroup")
+//    if (cgroupFile.exists()) {
+//        val lines = cgroupFile.readLines()
+//        for (line in lines) {
+//            if (line.contains("docker")) {
+//                val parts = line.split("/")
+//                return parts.lastOrNull() // The last part should be the container ID
+//            }
+//        }
+//    }
+//    return null // Not running in a Docker container
+
+    return InetAddress.getLocalHost().hostName
 }

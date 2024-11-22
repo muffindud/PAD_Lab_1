@@ -26,7 +26,12 @@ const val serviceName: String = "Game Lobby"
 var externalPort: Int = 0
 
 suspend fun main(args: Array<String>) {
-    externalPort = getExternalPort()
+    try {
+        externalPort = getExternalPort()
+    } catch (e: Exception) {
+        println("Failed to get external port, using default")
+        externalPort = game_lobby_port
+    }
     serviceId = registerService(service_discovery_url, game_lobby_port)
 
     println("Starting on external port: $externalPort")

@@ -5,6 +5,7 @@ from quart import request, jsonify
 from quart_rate_limiter import rate_limit
 from json import loads
 from pybreaker import CircuitBreaker, CircuitBreakerError
+from jwt import decode, encode
 
 
 user_manager_breaker = CircuitBreaker(fail_max=app.config['FAIL_MAX'], reset_timeout=app.config['RESET_TIMEOUT'])
@@ -125,31 +126,101 @@ async def profile():
 @app.route('/transfer', methods=['POST'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def transfer():
+    task_stack: list[str] = []
+    data: dict = await request.get_json()
+    source_username: str = decode(request.headers['Authorization'].split(' ')[1], algorithms='HS256', key=app.config['USER_JWT_SECRET'])['username']
+    server_token: str = encode({'server': 'Gateway'}, app.config['INTERNAL_JWT_SECRET'], algorithm='HS256')
+
     try:
+        response = await user_manager_breaker.call_async(
+            func=handle_request,
+            path=f'/transfer',
+            method='PUT',
+            host_get=get_round_robin_user_manager,
+            service_name=service_name,
+            headers={'Authorization': f'Bearer {server_token}'},
+            data={"amount": -data['amount'], "username": source_username}
+        )
+
+        if response.status_code >= 400:
+            raise Exception(f'Failed to subtract amount from source user: {response.text}')
+
+        print(f'Subtracted amount from source user: {response.text}')
+        task_stack.append('subtract')
+
+        response = await user_manager_breaker.call_async(
+            func=handle_request,
+            path=f'/transfer',
+            method='PUT',
+            host_get=get_round_robin_user_manager,
+            service_name=service_name,
+            headers={'Authorization': f'Bearer {server_token}'},
+            data={"amount": data['amount'], "username": data['username']}
+        )
+
+        if response.status_code >= 400:
+            raise Exception(f'Failed to add amount to destination user: {response.text}')
+
+        print(f'Added amount to destination user: {response.text}')
+        task_stack.append('add')
+
         response = await user_manager_breaker.call_async(
             func=handle_request,
             path=f'/transfer',
             method='POST',
             host_get=get_round_robin_user_manager,
             service_name=service_name,
-            headers={'Authorization': request.headers['Authorization']},
-            data=await request.get_json()
+            headers={'Authorization': f'Bearer {server_token}'},
+            data={"sender": source_username, "receiver": data['username'], "amount": data['amount']}
         )
-        return jsonify(loads(response.text)), response.status_code
 
-    except NoServiceError:
-        return jsonify({'error': f'No {service_name} services available'}), 503
+        if response.status_code >= 400:
+            raise Exception(f'Failed to create transfer record: {response.text}')
 
-    except ServiceError:
-        return jsonify({'error': f'Failed to handle request on {service_name} services.'}), 503
+        print(f'Created transfer record: {response.text}')
+        task_stack.append('create_log')
 
-    except CircuitBreakerError:
-        return jsonify({'error': f'{service_name} circuit breaker open'}), 503
+        return jsonify(
+            {
+                'message': 'Transfer successful',
+                'username': data['username'],
+                'amount': data['amount']
+            }
+        ), 200
 
     except Exception as e:
-        print(f'Failed to handle request: {e}')
-        return jsonify({'error': f'Failed to handle request: {e}'}), 503
+        print(f'Failed to handle request: {e}, rolling back...')
+        while task_stack:
+            task = task_stack.pop()
+            try:
+                if task == 'subtract':
+                    response = await user_manager_breaker.call_async(
+                        func=handle_request,
+                        path=f'/transfer',
+                        method='PUT',
+                        host_get=get_round_robin_user_manager,
+                        service_name=service_name,
+                        headers={'Authorization': f'Bearer {server_token}'},
+                        data={"amount": data['amount'], "user": source_username}
+                    )
+                    print(f'Rolling back subtract: {response.text}')
 
+                elif task == 'add':
+                    response = await user_manager_breaker.call_async(
+                        func=handle_request,
+                        path=f'/transfer',
+                        method='PUT',
+                        host_get=get_round_robin_user_manager,
+                        service_name=service_name,
+                        headers={'Authorization': f'Bearer {server_token}'},
+                        data={"amount": -data['amount'], "username": data['username']}
+                    )
+                    print(f'Rolling back add: {response.text}')
+
+            except Exception as e:
+                print(f'Failed to rollback task {task}: {e}')
+
+        return jsonify({'error': f'Failed to handle request: {e}'}), 500
 
 @app.route('/transfer', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])

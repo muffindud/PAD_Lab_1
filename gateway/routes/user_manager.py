@@ -127,16 +127,11 @@ async def profile():
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def transfer():
     task_stack: list[str] = []
-    data: dict = None
-    source_username: str = None
-    server_token: str = None
+    data: dict = await request.get_json()
+    source_username: str = decode(request.headers['Authorization'].split(' ')[1], algorithms='HS256', key=app.config['USER_JWT_SECRET'])['username']
+    server_token: str = encode({'server': 'Gateway'}, app.config['INTERNAL_JWT_SECRET'], algorithm='HS256')
 
     try:
-        data = await request.get_json()
-
-        source_username = decode(request.headers['Authorization'].split(' ')[1], algorithms='HS256', key=app.config['USER_JWT_SECRET'])['username']
-        server_token = encode({'server': 'Gateway'}, app.config['INTERNAL_JWT_SECRET'], algorithm='HS256')
-
         response = await user_manager_breaker.call_async(
             func=handle_request,
             path=f'/transfer',
@@ -144,7 +139,7 @@ async def transfer():
             host_get=get_round_robin_user_manager,
             service_name=service_name,
             headers={'Authorization': f'Bearer {server_token}'},
-            data={"amount": -data['amount'], "user": source_username}
+            data={"amount": -data['amount'], "username": source_username}
         )
 
         if response.status_code >= 400:
@@ -175,7 +170,7 @@ async def transfer():
             method='POST',
             host_get=get_round_robin_user_manager,
             service_name=service_name,
-            headers={'Authorization': request.headers['Authorization']},
+            headers={'Authorization': f'Bearer {server_token}'},
             data={"sender": source_username, "receiver": data['username'], "amount": data['amount']}
         )
 

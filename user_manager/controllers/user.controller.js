@@ -253,4 +253,75 @@ User.secureGetTransferHistory = async (req, res) => {
     }
 };
 
+User.internalTransfer = async (req, res) => {
+    if (!req.get('Authorization')) {
+        return res.status(401).send({ message: 'Unauthorized' });
+    }
+
+    try {
+        try{
+            const token = req.get('Authorization').split(' ')[1];
+            const decoded = verifyInternalToken(token);
+            if (decoded.server != 'Gateway') {
+                return res.status(401).send({ message: 'Unauthorized' });
+            }
+        } catch (err) {
+            return res.status(401).send({ message: 'Unauthorized' });
+        }
+
+        if (!req.body.username || !req.body.amount) {
+            return res.status(400).send({ message: 'Missing required fields.' });
+        }
+
+        const receiverData = await User.findOne({ where: { username: req.body.username } });
+        if (!receiverData) {
+            return res.status(404).send({ message: 'Receiver Not found.' });
+        }
+
+        await User.update({ balance: parseInt(receiverData.balance) + parseInt(req.body.amount) }, { where: { username: req.body.username } });
+
+        res.status(200).send({ message: 'Transfer successful.' });
+    } catch (err) {
+        console.log(err);
+        res.status(500).send({ message: err.message });
+    }
+};
+
+User.internalTransferLog = async (req, res) => {
+    if (!req.get('Authorization')) {
+        return res.status(401).send({ message: 'Unauthorized' });
+    }
+
+    try {
+        try{
+            const token = req.get('Authorization').split(' ')[1];
+            const decoded = verifyInternalToken(token);
+            if (decoded.server != 'Gateway') {
+                return res.status(401).send({ message: 'Unauthorized' });
+            }
+        } catch (err) {
+            return res.status(401).send({ message: 'Unauthorized' });
+        }
+
+        if (!req.body.sender || !req.body.receiver || !req.body.amount) {
+            return res.status(400).send({ message: 'Missing required fields.' });
+        }
+
+        const transferResult = await session.run(
+            `
+            MERGE (from:User {username: $sender})
+            MERGE (to:User {username: $receiver})
+            CREATE (from)-[:TRANSFERRED {amount: $amount, timestamp: timestamp()}]->(to)
+            RETURN from, to
+            `,
+            { sender: req.body.sender, receiver: req.body.receiver, amount: req.body.amount }
+        );
+
+        res.status(200).send({ message: 'Transfer logged successfully.' });
+    } catch (err) {
+        console.log(err);
+        res.status(500).send({ message: err.message });
+    }
+};
+
 module.exports = User;

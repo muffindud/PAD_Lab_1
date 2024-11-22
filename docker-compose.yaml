@@ -108,6 +108,8 @@ services:
       - MONGO_DB_NAME=$MONGO_DB_NAME
       - MONGO_ROOT_USER=$MONGO_ROOT_USER
       - MONGO_ROOT_PASS=$MONGO_ROOT_PASS
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:
@@ -147,6 +149,8 @@ services:
       - user_manager
       - game_lobby
       - exchange-service
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./prometheus.yaml:/etc/prometheus/prometheus.yaml
       - prometheus_data:/prometheus

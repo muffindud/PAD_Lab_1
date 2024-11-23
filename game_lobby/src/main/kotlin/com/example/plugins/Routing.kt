@@ -8,6 +8,7 @@ import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.principal
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 import org.koin.ktor.ext.inject
@@ -18,7 +19,7 @@ suspend fun <T> executeWithTimeout(block: suspend () -> T): T {
     }
 }
 
-fun Application.configureRouting() {
+fun Application.configureRouting(externalPort: Int, appMicrometerRegistry: PrometheusMeterRegistry, getActiveLobbies: () -> MutableMap<Int, List<String>>) {
     val logRepository by inject<GameLogRepository>()
 
     routing {
@@ -27,7 +28,6 @@ fun Application.configureRouting() {
         }
 
         get("/health") {
-            // call.respond("{\"status\": \"healthy\"}")
             try {
                 val result = executeWithTimeout {
                     "{\"status\": \"healthy\"}"
@@ -38,12 +38,49 @@ fun Application.configureRouting() {
             }
         }
 
+        get("/metrics") {
+            call.respond(appMicrometerRegistry.scrape())
+        }
+
+//        get("/external") {
+//            call.respond("{\"port\": $externalPort}")
+//        }
+
         authenticate("user_jwt") {
             get("/logs") {
                 val username = call.principal<JWTPrincipal>()?.payload?.getClaim("username")?.asString()
 
                 logRepository.findByUsername(username!!)
                     .let { call.respond(it) }
+            }
+        }
+
+        authenticate("server_jwt") {
+            get("/lobby") {
+                val server = call.principal<JWTPrincipal>()?.payload?.getClaim("server")?.asString()
+                val activeLobbies = getActiveLobbies().map { (lobbyId, players) -> lobbyId to players }.toMap()
+                // format activeLobbies to a json string like this: {1: ["player1", "player2"], 2: ["player3", "player4"]}
+                val activeLobbiesJson = activeLobbies.entries.joinToString(
+                    prefix = "{",
+                    postfix = "}",
+                    separator = ",",
+                    transform = { (lobbyId, players) -> "\"$lobbyId\": ${players.map { "\"$it\"" }.joinToString(prefix = "[", postfix = "]")}" }
+                )
+                /*
+                  create a body for the response
+                    {
+                        "port": getContainerPort(),
+                        "lobbies": activeLobbies
+                 */
+                val body = "{\"port\": \"${externalPort}\", \"lobbies\": $activeLobbiesJson}"
+                if (server == "Gateway") {
+                    call.respond(
+                        HttpStatusCode.OK,
+                        body
+                    )
+                } else {
+                    call.respond(HttpStatusCode.Forbidden)
+                }
             }
         }
     }

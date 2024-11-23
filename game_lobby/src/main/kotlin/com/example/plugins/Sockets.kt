@@ -14,8 +14,17 @@ import kotlinx.serialization.json.Json
 import org.koin.ktor.ext.inject
 import java.time.*
 
-fun Application.configureSockets() {
+fun Application.configureSockets(): () -> MutableMap<Int, List<String>> {
     val lobbies = mutableMapOf<Int, Lobby>()
+
+    fun getActiveLobbies(): MutableMap<Int, List<String>> {
+        val activeLobbies = mutableMapOf<Int, List<String>>()
+        lobbies.forEach { (gameId, lobby) ->
+            activeLobbies[gameId] = lobby.getUsernames()
+        }
+        return activeLobbies
+    }
+
     fun deleteLobby(gameId: Int) {
         lobbies.remove(gameId)
     }
@@ -44,7 +53,7 @@ fun Application.configureSockets() {
                 val username = call.principal<JWTPrincipal>()?.payload?.getClaim("username")?.asString()
 
                 // save to lobby
-                lobbies.getOrPut(gameId) { Lobby(gameId.toString(), logRepository, { deleteLobby(gameId) }) }.addClient(this)
+                lobbies.getOrPut(gameId) { Lobby(gameId.toString(), logRepository, { deleteLobby(gameId) }) }.addClient(this, username!!)
 
                 // notify other users that user joined
                 lobbies[gameId]?.broadcast("[$username] joined the lobby $gameId")
@@ -52,7 +61,7 @@ fun Application.configureSockets() {
                     for (frame in incoming) {
                         frame as? Frame.Text ?: continue
                         val receivedText = frame.readText()
-                        lobbies[gameId]?.handleCommand(receivedText, this, username)
+                        lobbies[gameId]?.handleCommand(receivedText, this)
                     }
                 } finally {
                     // Remove from lobby
@@ -64,4 +73,6 @@ fun Application.configureSockets() {
             }
         }
     }
+
+    return { getActiveLobbies() }
 }

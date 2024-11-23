@@ -40,6 +40,7 @@ services:
       - FLASK_RUN_PORT=$SERVICE_DISCOVERY_PORT
       - FLASK_RUN_HOST=0.0.0.0
       - PYTHONUNBUFFERED=1
+      - GAME_LOBBY_PORT=$GAME_LOBBY_PORT
 
   gateway:
     build: ./gateway
@@ -54,6 +55,8 @@ services:
       - QUART_RUN_HOST=0.0.0.0
       - PYTHONUNBUFFERED=1
       - USER_JWT_SECRET=$USER_MANAGER_JWT_USER_SECRET
+      - INTERNAL_JWT_SECRET=$JWT_INTERNAL_SECRET
+      - GAME_LOBBY_HOST=$GAME_LOBBY_HOST
 
   user_manager:
     build: ./user_manager
@@ -87,6 +90,8 @@ services:
     build: ./game_lobby
     depends_on:
       - service-discovery
+    ports:
+      - "$GAME_LOBBY_PORT"
     # depends_on:
     #   user_manager:
     #     condition: service_healthy
@@ -103,6 +108,10 @@ services:
       - MONGO_DB_NAME=$MONGO_DB_NAME
       - MONGO_ROOT_USER=$MONGO_ROOT_USER
       - MONGO_ROOT_PASS=$MONGO_ROOT_PASS
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     deploy:
       mode: replicated
       replicas: 3
@@ -130,6 +139,36 @@ services:
       replicas: 3
       endpoint_mode: vip
 
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "$PROMETHEUS_PORT:$PROMETHEUS_PORT"
+    depends_on:
+      - service-discovery
+      - gateway
+      - user_manager
+      - game_lobby
+      - exchange-service
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yaml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yaml'
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "$GRAFANA_PORT:3000"
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_USER=$GRAFANA_USER
+      - GF_SECURITY_ADMIN_PASSWORD=$GRAFANA_PASS
+    volumes:
+      - grafana_data:/var/lib/grafana
+
 volumes:
   db_data:
   lobby_log:
@@ -137,3 +176,5 @@ volumes:
   neo4j_logs:
   neo4j_config:
   neo4j_plugins:
+  prometheus_data:
+  grafana_data:

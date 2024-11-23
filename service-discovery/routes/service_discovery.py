@@ -1,5 +1,11 @@
 from app import app, services
 from flask import request, jsonify
+from os import environ
+from threading import Lock
+
+
+game_lobby_free_port_lock = Lock()
+game_lobby_free_port: int = int(environ['GAME_LOBBY_PORT'])
 
 
 @app.route('/discovery', methods=['GET', 'POST'])
@@ -44,6 +50,22 @@ def discovery():
 
         # Return the service_id
         return jsonify({'message': 'Service added successfully', 'service_id': service_id}), 201
+
+    else:
+        return jsonify({
+            'message': 'Invalid request'
+        })
+
+
+
+@app.route('/discovery/get_lobby_port', methods=['GET'])
+def get_lobby_port():
+    if request.method == 'GET':
+        global game_lobby_free_port
+        with game_lobby_free_port_lock:
+            port = game_lobby_free_port
+            game_lobby_free_port += 1
+        return jsonify({'port': port})
 
     else:
         return jsonify({

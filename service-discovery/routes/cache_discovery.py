@@ -25,7 +25,10 @@ def register_cache():
             if caches['services'][cache_id]['status'] == 'healthy':
                 healthy_caches[cache_id] = caches['services'][cache_id]['host']
 
-        return jsonify(healthy_caches)
+        return jsonify({
+            "caches": healthy_caches,
+            "cache_keys": cache_keys
+        })
 
     elif request.method == 'POST':
         data = request.json

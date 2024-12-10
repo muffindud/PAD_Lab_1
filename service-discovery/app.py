@@ -94,7 +94,7 @@ def create_app():
                 services[service_name]['services'][service_id]['retry_count'] += 1
                 services[service_name]['services'][service_id]['checking'] = False
                 print(f'{service_name} {service_id} is inactive status code pobably 500\n', end='')
-                if services[service_name]['services'][service_id]['retry_count'] >= MAX_RETRY_COUNT:
+                if services[service_name]['services'][service_id]['retry_count'] >= MAX_RETRY_COUNT and service_name != 'Cache':
                     # If the service has reached the maximum number of retries, remove it from the list
                     del services[service_name]['services'][service_id]
                     print(f'{service_name} {service_id} has reached the maximum number of retries... removing.\n', end='')

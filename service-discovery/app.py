@@ -44,6 +44,9 @@ services: dict = {}
 data_lock = Lock()
 timer = Timer(0, lambda: None, ())
 
+cache_keys = []
+cache_keys_lock = Lock()
+
 
 def create_app():
     app = Flask(__name__)
@@ -126,3 +129,4 @@ def create_app():
 app = create_app()
 import routes.service_discovery
 import routes.targets
+import routes.cache_discovery

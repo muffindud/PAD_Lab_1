@@ -1,8 +1,10 @@
 from quart import Quart, request, jsonify
 from datetime import datetime
+from asyncio import create_task
 from httpx import AsyncClient
 from socket import gethostname
 from os import environ
+from threading import Lock
 
 
 RATE_LIFETIME = 60 * 60  # 1 hour
@@ -30,17 +32,36 @@ exchange_rates = {
 }
 """
 exchange_rates = {}
+ring_updater_task = None
+
+cache_id = None
+cache_ring = {}
+cache_ring_lock = Lock()
+
+
+async def update_ring():
+    global cache_ring
+    global cache_ring_lock
+
+    while True:
+        ...
 
 
 @app.before_serving
 async def startup():
-    with AsyncClient() as client:
+    async with AsyncClient() as client:
         response = await client.post(
             SERIVCE_DISCOVERY_URL,
             json={
                 "host": gethostname(),
                 "port": PORT
             })
+
+        global cache_id
+        cache_id = response.json()["cache_id"]
+
+    global ring_updater_task
+    ring_updater_task = create_task(update_ring())
 
 
 @app.route('/', methods=['GET'])

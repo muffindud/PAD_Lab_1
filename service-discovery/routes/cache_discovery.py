@@ -47,6 +47,11 @@ def register_cache():
             cache_keys.append(cache_id)
             cache_keys.sort()
 
+        return jsonify({
+            'message': 'Cache registered successfully',
+            'cache_id': cache_id
+        })
+
     else:
         return jsonify({
             'message': 'Invalid request'

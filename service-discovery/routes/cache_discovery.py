@@ -16,7 +16,16 @@ def hash(value: str) -> int:
 @app.route('/cache', methods=['GET', 'POST'])
 def register_cache():
     if request.method == 'GET':
-        return jsonify({"msg": "TODO"})
+        healthy_caches = {}
+
+        with data_lock:
+            caches = services.get(SERVICE_NAME, {'services': {}})
+
+        for cache_id in caches['services']:
+            if caches['services'][cache_id]['status'] == 'healthy':
+                healthy_caches[cache_id] = caches['services'][cache_id]['host']
+
+        return jsonify(healthy_caches)
 
     elif request.method == 'POST':
         data = request.json

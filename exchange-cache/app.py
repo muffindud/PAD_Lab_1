@@ -1,10 +1,16 @@
-from flask import Flask, request, jsonify
+from quart import Quart, request, jsonify
 from datetime import datetime
+from httpx import AsyncClient
+from socket import gethostname
+from os import environ
 
 
 RATE_LIFETIME = 60 * 60  # 1 hour
+CACHE_RING_UPDATE_INTERVAL = 60 * 1 # 1 minute
+SERIVCE_DISCOVERY_URL = f"http:/{environ["SERVICE_DISCOVERY_HOST"]}:{environ["SERVICE_DISCOVERY_PORT"]}/cache"
+PORT = environ["QUART_RUN_PORT"]
 
-app = Flask(__name__)
+app = Quart(__name__)
 
 """
 exchange_rates = {
@@ -26,8 +32,19 @@ exchange_rates = {
 exchange_rates = {}
 
 
+@app.before_serving
+async def startup():
+    with AsyncClient() as client:
+        response = await client.post(
+            SERIVCE_DISCOVERY_URL,
+            json={
+                "host": gethostname(),
+                "port": PORT
+            })
+
+
 @app.route('/', methods=['GET'])
-def get_currency():
+async def get_currency():
     try:
         baseCurrency = request.args.get('baseCurrency').lower()
         targetCurrency = request.args.get('targetCurrency').lower()
@@ -71,7 +88,7 @@ def get_currency():
     )
 
 @app.route('/', methods=['POST'])
-def post_currency():
+async def post_currency():
     try:
         data = request.get_json()
         for baseCurrency, rates in data.items():
@@ -92,7 +109,7 @@ def post_currency():
 
 
 @app.route('/health', methods=['GET'])
-def health():
+async def health():
     return jsonify(
         {
             "status": "healthy"

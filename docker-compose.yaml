@@ -120,8 +120,10 @@ services:
   exchange-cache:
     build: ./exchange-cache
     environment:
-      - FLASK_RUN_HOST=0.0.0.0
-      - FLASK_RUN_PORT=$EXCHANGE_CACHE_PORT
+      - QUART_RUN_HOST=0.0.0.0
+      - QUART_RUN_PORT=$EXCHANGE_CACHE_PORT
+      - SERVICE_DISCOVERY_HOST=service-discovery
+      - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
 
   exchange-service:
     build: ./exchange-service

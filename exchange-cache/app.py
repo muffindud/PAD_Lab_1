@@ -36,14 +36,16 @@ exchange_rates = {
 exchange_rates = {}
 ring_updater_task = None
 
+local_server_url = None
 cache_id = None
-cache_server = None
 cache_ring = {}
 cache_ring_lock = Lock()
 cache_ids = []
 cache_ids_lock = Lock()
 top_cache_id = None
+top_server_url = None
 bottom_cache_id = None
+bottom_server_url = None
 
 
 async def hash(value: str) -> int:
@@ -51,52 +53,47 @@ async def hash(value: str) -> int:
 
 
 async def get_server(baseCurrency: str) -> str:
-    hashed_id = hash(baseCurrency)
-    index = bisect_right(cache_ids, hashed_id) % len(cache_ids)
-    server_key = cache_ids[index]
+    server_key = cache_ids[bisect_right(cache_ids, hash(baseCurrency)) % len(cache_ids)]
 
     return f'http://{cache_ring[server_key]["host"]}:{cache_ring[server_key]["port"]}'
 
 
 async def recalibrate_ring(new_cache_ring):
     global cache_ring
-    global cache_ring_lock
     global cache_ids
-    global cache_ids_lock
+    global top_cache_id
+    global top_server_url
+    global bottom_cache_id
+    global bottom_server_url
+    global bottom_cache_id
 
-    old_ring = None
     old_ids = None
-    old_top_cache_id = None
-    old_bottom_cache_id = None
 
     async with cache_ring_lock:
-        old_ring = cache_ring
         cache_ring = {int(cache_id, 16): cache_info for cache_id, cache_info in new_cache_ring.items()}
 
     async with cache_ids_lock:
-        old_ids = cache_ids
+        old_ids = [cid for cid in cache_ids]
         cache_ids = list([int(cache_id, 16) for cache_id in cache_ring.keys()])
         cache_ids.sort()
-        old_top_cache_id = top_cache_id
-        old_bottom_cache_id = bottom_cache_id
         top_cache_id = cache_ids[(bisect_right(cache_ids, cache_id) + 1) % len(cache_ids)]
         bottom_cache_id = cache_ids[(bisect_right(cache_ids, cache_id) - 1) % len(cache_ids)]
 
-    if old_top_cache_id != top_cache_id or old_bottom_cache_id != bottom_cache_id:
+    if old_ids != cache_ids:
+        top_server_url = f"http://{cache_ring[top_cache_id]["host"]}:{cache_ring[top_cache_id]["port"]}"
+        bottom_server_url = f"http://{cache_ring[bottom_cache_id]["host"]}:{cache_ring[bottom_cache_id]["port"]}"
         for baseCurrency, rates in exchange_rates.items():
             server = get_server(baseCurrency)
-
-    # Handle removed nodes (check if the held data is from a lower cache_id)
-    # TODO
-
-    # Handle new nodes
-    # TODO
-
+            if server != local_server_url:
+                async with AsyncClient() as client:
+                    await client.post(
+                        f"{server}/",
+                        json={baseCurrency: rates}
+                    )
 
 
 async def update_ring():
     global cache_ring
-    global cache_ring_lock
 
     sleep(5)
 
@@ -112,16 +109,20 @@ async def update_ring():
 
 @app.before_serving
 async def startup():
+    global local_server_url
+
+    hostname = gethostname()
+    local_server_url = f'http://{hostname}:{PORT}'
+
     async with AsyncClient() as client:
         response = await client.post(
             SERIVCE_DISCOVERY_URL,
             json={
-                "host": gethostname(),
+                "host": hostname,
                 "port": PORT
             })
 
         global cache_id
-        global cache_server
         cache_id = int(response.json()["cache_id"], 16)
 
     global ring_updater_task
@@ -179,6 +180,18 @@ async def post_currency():
         for baseCurrency, rates in data.items():
             exchange_rates[baseCurrency.lower()] = {rate.lower(): value for rate, value in rates.items()}
             exchange_rates[baseCurrency.lower()]["last_updated"] = datetime.timestamp(datetime.now())
+
+        for baseCurrency, rates in exchange_rates.items():
+            if get_server(baseCurrency) != f'http://{gethostname()}:{PORT}':
+                with AsyncClient() as client:
+                    await client.post(
+                        f"{top_server_url}/",
+                        json={baseCurrency: rates}
+                    )
+                    await client.post(
+                        f"{bottom_server_url}/",
+                        json={baseCurrency: rates}
+                    )
 
         return jsonify(
             {

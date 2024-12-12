@@ -11,8 +11,8 @@ from bisect import bisect_right
 
 RATE_LIFETIME = 60 * 60  # 1 hour
 CACHE_RING_UPDATE_INTERVAL = 60 * 1 # 1 minute
-SERIVCE_DISCOVERY_URL = f"http:/{environ["SERVICE_DISCOVERY_HOST"]}:{environ["SERVICE_DISCOVERY_PORT"]}/cache"
-PORT = environ["QUART_RUN_PORT"]
+SERIVCE_DISCOVERY_URL = f"http://{environ['SERVICE_DISCOVERY_HOST']}:{environ['SERVICE_DISCOVERY_PORT']}/cache"
+PORT = environ['QUART_RUN_PORT']
 
 app = Quart(__name__)
 
@@ -55,7 +55,7 @@ async def hash(value: str) -> int:
 async def get_server(baseCurrency: str) -> str:
     server_key = cache_ids[bisect_right(cache_ids, hash(baseCurrency)) % len(cache_ids)]
 
-    return f'http://{cache_ring[server_key]["host"]}:{cache_ring[server_key]["port"]}'
+    return f"http://{cache_ring[server_key]['host']}:{cache_ring[server_key]['port']}"
 
 
 async def recalibrate_ring(new_cache_ring):
@@ -80,8 +80,8 @@ async def recalibrate_ring(new_cache_ring):
         bottom_cache_id = cache_ids[(bisect_right(cache_ids, cache_id) - 1) % len(cache_ids)]
 
     if old_ids != cache_ids:
-        top_server_url = f"http://{cache_ring[top_cache_id]["host"]}:{cache_ring[top_cache_id]["port"]}"
-        bottom_server_url = f"http://{cache_ring[bottom_cache_id]["host"]}:{cache_ring[bottom_cache_id]["port"]}"
+        top_server_url = f"http://{cache_ring[top_cache_id]['host']}:{cache_ring[top_cache_id]['port']}"
+        bottom_server_url = f"http://{cache_ring[bottom_cache_id]['host']}:{cache_ring[bottom_cache_id]['port']}"
         for baseCurrency, rates in exchange_rates.items():
             server = get_server(baseCurrency)
             if server != local_server_url:
@@ -112,7 +112,7 @@ async def startup():
     global local_server_url
 
     hostname = gethostname()
-    local_server_url = f'http://{hostname}:{PORT}'
+    local_server_url = f"http://{hostname}:{PORT}"
 
     async with AsyncClient() as client:
         response = await client.post(
@@ -123,7 +123,9 @@ async def startup():
             })
 
         global cache_id
-        cache_id = int(response.json()["cache_id"], 16)
+        cid = str(response.json()['cache_id'])
+        print(f"Cache ID: {cid}")
+        cache_id = int(cid, 16)
 
     global ring_updater_task
     ring_updater_task = create_task(update_ring())
@@ -182,7 +184,7 @@ async def post_currency():
             exchange_rates[baseCurrency.lower()]["last_updated"] = datetime.timestamp(datetime.now())
 
         for baseCurrency, rates in exchange_rates.items():
-            if get_server(baseCurrency) != f'http://{gethostname()}:{PORT}':
+            if get_server(baseCurrency) != f"http://{gethostname()}:{PORT}":
                 with AsyncClient() as client:
                     await client.post(
                         f"{top_server_url}/",

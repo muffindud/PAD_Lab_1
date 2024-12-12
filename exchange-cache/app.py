@@ -37,10 +37,25 @@ exchange_rates = {}
 ring_updater_task = None
 
 cache_id = None
+cache_server = None
 cache_ring = {}
 cache_ring_lock = Lock()
 cache_ids = []
 cache_ids_lock = Lock()
+top_cache_id = None
+bottom_cache_id = None
+
+
+async def hash(value: str) -> int:
+    return int(sha256(value.encode('utf-8')).hexdigest(), 16)
+
+
+async def get_server(baseCurrency: str) -> str:
+    hashed_id = hash(baseCurrency)
+    index = bisect_right(cache_ids, hashed_id) % len(cache_ids)
+    server_key = cache_ids[index]
+
+    return f'http://{cache_ring[server_key]["host"]}:{cache_ring[server_key]["port"]}'
 
 
 async def recalibrate_ring(new_cache_ring):
@@ -51,6 +66,8 @@ async def recalibrate_ring(new_cache_ring):
 
     old_ring = None
     old_ids = None
+    old_top_cache_id = None
+    old_bottom_cache_id = None
 
     async with cache_ring_lock:
         old_ring = cache_ring
@@ -60,6 +77,14 @@ async def recalibrate_ring(new_cache_ring):
         old_ids = cache_ids
         cache_ids = list([int(cache_id, 16) for cache_id in cache_ring.keys()])
         cache_ids.sort()
+        old_top_cache_id = top_cache_id
+        old_bottom_cache_id = bottom_cache_id
+        top_cache_id = cache_ids[(bisect_right(cache_ids, cache_id) + 1) % len(cache_ids)]
+        bottom_cache_id = cache_ids[(bisect_right(cache_ids, cache_id) - 1) % len(cache_ids)]
+
+    if old_top_cache_id != top_cache_id or old_bottom_cache_id != bottom_cache_id:
+        for baseCurrency, rates in exchange_rates.items():
+            server = get_server(baseCurrency)
 
     # Handle removed nodes (check if the held data is from a lower cache_id)
     # TODO
@@ -96,6 +121,7 @@ async def startup():
             })
 
         global cache_id
+        global cache_server
         cache_id = int(response.json()["cache_id"], 16)
 
     global ring_updater_task

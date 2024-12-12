@@ -10,7 +10,7 @@ SERVICE_NAME = 'Cache'
 
 
 def hash(value: str) -> int:
-    return int(sha256(f'{value}'.encode('utf-8')).hexdigest(), 16)
+    return int(sha256(value.encode('utf-8')).hexdigest(), 16)
 
 
 @app.route('/cache', methods=['GET', 'POST'])

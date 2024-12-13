@@ -142,6 +142,8 @@ services:
       - NEO4J_PASS=$NEO4J_PASS
       - NEO4J_HOST=user_manager_transfer_db
       - NEO4J_DATABASE=$NEO4J_DATABASE
+      - JWT_USER_SECRET=$USER_MANAGER_JWT_USER_SECRET
+      - JWT_INTERNAL_SECRET=$JWT_INTERNAL_SECRET
     deploy:
       mode: replicated
       replicas: 3

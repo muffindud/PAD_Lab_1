@@ -22,7 +22,9 @@ class MongoConn:
             id = int(str(r['_id']), 16)
             result[id] = {
                 'lobby': r['lobbyId'],
-                'actions': r['gameActions'],
+                'actions': [
+                    (entry.split(' ')[0][:-1], entry.split(' ')[1]) for entry in r['gameActions']
+                ],
             }
 
         return result

@@ -188,7 +188,7 @@ async def get_currency():
                 )
 
             if response.status_code < 500:
-                return response.json()
+                return response.json(), response.status_code
             else:
                 async with AsyncClient() as client:
                     response = await client.get(
@@ -200,7 +200,7 @@ async def get_currency():
                     )
 
                 if response.status_code < 500:
-                    return response.json()
+                    return response.json(), response.status_code
 
                 else:
                     async with AsyncClient() as client:
@@ -213,7 +213,7 @@ async def get_currency():
                         )
 
                     if response.status_code < 500:
-                        return response.json()
+                        return response.json(), response.status_code
 
                     else:
                         return jsonify(
@@ -232,33 +232,47 @@ async def get_currency():
 
 @app.route('/', methods=['POST'])
 async def post_currency():
+    global exchange_rates
+
     try:
         data = request.get_json()
         for baseCurrency, rates in data.items():
-            exchange_rates[baseCurrency.lower()] = {rate.lower(): value for rate, value in rates.items()}
-            exchange_rates[baseCurrency.lower()]["last_updated"] = datetime.timestamp(datetime.now())
+            target_server = get_server(baseCurrency)
+            if target_server == f"http://{gethostname()}:{PORT}":
+                exchange_rates[baseCurrency.lower()] = {rate.lower(): value for rate, value in rates.items()}
+                exchange_rates[baseCurrency.lower()]["last_updated"] = datetime.timestamp(datetime.now())
+                print(f"Updated {baseCurrency} rates: {rates}")
 
-        for baseCurrency, rates in exchange_rates.items():
-            if get_server(baseCurrency) != f"http://{gethostname()}:{PORT}":
-                try:
-                    if local_server_url != top_server_url:
-                        async with AsyncClient() as client:
-                            await client.post(
-                                f"{top_server_url}/",
-                                json={baseCurrency: rates}
-                            )
-                except Exception as e:
-                    print(f"Failed to update {top_server_url}: {e}")
+                if local_server_url != top_server_url:
+                    async with AsyncClient() as client:
+                        await client.post(
+                            f"{top_server_url}/",
+                            json={baseCurrency: rates}
+                        )
 
+                if local_server_url != bottom_server_url and bottom_server_url != top_server_url:
+                    async with AsyncClient() as client:
+                        await client.post(
+                            f"{bottom_server_url}/",
+                            json={baseCurrency: rates}
+                        )
+
+            elif target_server == top_server_url or target_server == bottom_server_url:
+                exchange_rates[baseCurrency.lower()] = {rate.lower(): value for rate, value in rates.items()}
+                exchange_rates[baseCurrency.lower()]["last_updated"] = datetime.timestamp(datetime.now())
+                print(f"Backed up {baseCurrency} rates: {rates}")
+
+            else:
                 try:
-                    if local_server_url != bottom_server_url and bottom_server_url != top_server_url:
-                        async with AsyncClient() as client:
-                            await client.post(
-                                f"{bottom_server_url}/",
-                                json={baseCurrency: rates}
-                            )
+                    async with AsyncClient() as client:
+                        response = await client.post(
+                            target_server,
+                            json={baseCurrency: rates}
+                        )
+
+                        return response.json(), response.status_code
                 except Exception as e:
-                    print(f"Failed to update {bottom_server_url}: {e}")
+                    print(f"Failed to update {target_server}: {e}")
 
         return jsonify(
             {

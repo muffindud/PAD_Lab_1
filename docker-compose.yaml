@@ -63,7 +63,6 @@ services:
     depends_on:
       - service-discovery
       - user_manager_db
-      - user_manager_transfer_db
     environment:
       - SERVICE_DISCOVERY_HOST=service-discovery
       - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
@@ -86,9 +85,6 @@ services:
       - service-discovery
     ports:
       - "$GAME_LOBBY_PORT"
-    # depends_on:
-    #   user_manager:
-    #     condition: service_healthy
     environment:
       - SERVICE_DISCOVERY_HOST=service-discovery
       - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
@@ -130,6 +126,7 @@ services:
     depends_on:
       - service-discovery
       - exchange-cache
+      - user_manager_transfer_db
     environment:
       - SERVICE_DISCOVERY_HOST=service-discovery
       - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT

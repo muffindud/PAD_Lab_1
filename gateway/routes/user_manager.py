@@ -1,6 +1,6 @@
 from app import app, get_service_registry
 from src.request_handler import handle_request, NoServiceError, ServiceError
-from exchange_service import exchange_service_breaker, get_round_robin_exchange_service
+from routes.exchange_service import exchange_service_breaker, get_round_robin_exchange_service
 
 from quart import request, jsonify
 from quart_rate_limiter import rate_limit

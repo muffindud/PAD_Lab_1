@@ -14,6 +14,21 @@ services:
       - POSTGRES_PASSWORD=$DB_PASS
       - POSTGRES_DB=$DB_NAME
 
+  data_warehouse_db:
+    image: postgres:13
+    user: ${DB_WH_USER}
+    volumes:
+      - db_wh_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_WH_USER}"]
+      interval: 2s
+      timeout: 1s
+      retries: 5
+    environment:
+      - POSTGRES_USER=$DB_WH_USER
+      - POSTGRES_PASSWORD=$DB_WH_PASS
+      - POSTGRES_DB=$DB_WH_NAME
+
   user_manager_transfer_db:
     image: neo4j:4.2
     environment:
@@ -145,6 +160,35 @@ services:
       mode: replicated
       replicas: 3
       endpoint_mode: vip
+
+  etl-service:
+    build: ./etl-service
+    depends_on:
+      - user_manager_db
+      - data_warehouse_db
+      - user_manager_transfer_db
+      - game_lobby_logs_db
+    environment:
+      - USER_MANAGER_DB_HOST=user_manager_db
+      - USER_MANAGER_DB_PORT=$DB_PORT
+      - USER_MANAGER_DB_USER=$DB_USER
+      - USER_MANAGER_DB_PASS=$DB_PASS
+      - USER_MANAGER_DB_NAME=$DB_NAME
+      - DATA_WAREHOUSE_DB_HOST=data_warehouse_db
+      - DATA_WAREHOUSE_DB_PORT=$DB_PORT
+      - DATA_WAREHOUSE_DB_USER=$DB_WH_USER
+      - DATA_WAREHOUSE_DB_PASS=$DB_WH_PASS
+      - DATA_WAREHOUSE_DB_NAME=$DB_WH_NAME
+      - EXCHANGE_SERVICE_TRANSFER_DB_HOST=user_manager_transfer_db
+      - EXCHANGE_SERVICE_TRANSFER_DB_PORT=$NEO4J_BOLT_PORT
+      - EXCHANGE_SERVICE_TRANSFER_DB_USER=$NEO4J_USER
+      - EXCHANGE_SERVICE_TRANSFER_DB_PASS=$NEO4J_PASS
+      - EXCHANGE_SERVICE_TRANSFER_DB_NAME=$NEO4J_DATABASE
+      - GAME_LOBBY_LOGS_DB_HOST=game_lobby_logs_db
+      - GAME_LOBBY_LOGS_DB_PORT=$MONGO_PORT
+      - GAME_LOBBY_LOGS_DB_USER=$MONGO_ROOT_USER
+      - GAME_LOBBY_LOGS_DB_PASS=$MONGO_ROOT_PASS
+      - GAME_LOBBY_LOGS_DB_NAME=$MONGO_DB_NAME
 
   prometheus:
     image: prom/prometheus

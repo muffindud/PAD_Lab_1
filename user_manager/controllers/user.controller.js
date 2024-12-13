@@ -3,7 +3,6 @@ const db = require('../models');
 const User = db.users;
 const Op = db.Sequelize.Op;
 const { generateUserToken, verifyUserToken, verifyInternalToken } = require('../utils/authJwt');
-const session = require('../neo4j');
 
 User.secureCreate = async (req, res) => {
     try {

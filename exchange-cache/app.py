@@ -143,37 +143,94 @@ async def get_currency():
             }
         ), 400
 
-    if baseCurrency not in exchange_rates:
+    server = get_server(baseCurrency)
+
+    if server == local_server_url:
+        if baseCurrency not in exchange_rates:
+            return jsonify(
+                {
+                    "error": "Currency not found.",
+                    "currency": baseCurrency,
+                    "type": "base"
+                }
+            ), 404
+
+        # If it works how it should... we should never get here, but just in case
+        if targetCurrency not in exchange_rates[baseCurrency]:
+            return jsonify(
+                {
+                    "error": "Currency not found.",
+                    "currency": targetCurrency,
+                    "type": "target"
+                }
+            ), 404
+
+        if datetime.timestamp(datetime.now()) - exchange_rates[baseCurrency]["last_updated"] > RATE_LIFETIME:
+            return jsonify(
+                {
+                    "error": "Rate outdated. Please update the rates."
+                }
+            ), 404
+
         return jsonify(
             {
-                "error": "Currency not found.",
-                "currency": baseCurrency,
-                "type": "base"
+                "rate": exchange_rates[baseCurrency][targetCurrency]
             }
-        ), 404
+        )
 
-    # If it works how it should... we should never get here, but just in case
-    if targetCurrency not in exchange_rates[baseCurrency]:
-        return jsonify(
-            {
-                "error": "Currency not found.",
-                "currency": targetCurrency,
-                "type": "target"
-            }
-        ), 404
+    else:
+        try:
+            async with AsyncClient() as client:
+                response = await client.get(
+                    f"{server}/",
+                    params={
+                        "baseCurrency": baseCurrency,
+                        "targetCurrency": targetCurrency
+                    }
+                )
 
-    if datetime.timestamp(datetime.now()) - exchange_rates[baseCurrency]["last_updated"] > RATE_LIFETIME:
-        return jsonify(
-            {
-                "error": "Rate outdated. Please update the rates."
-            }
-        ), 404
+            if response.status_code < 500:
+                return response.json()
+            else:
+                async with AsyncClient() as client:
+                    response = await client.get(
+                        f"{top_server_url}/",
+                        params={
+                            "baseCurrency": baseCurrency,
+                            "targetCurrency": targetCurrency
+                        }
+                    )
 
-    return jsonify(
-        {
-            "rate": exchange_rates[baseCurrency][targetCurrency]
-        }
-    )
+                if response.status_code < 500:
+                    return response.json()
+
+                else:
+                    async with AsyncClient() as client:
+                        response = await client.get(
+                            f"{bottom_server_url}/",
+                            params={
+                                "baseCurrency": baseCurrency,
+                                "targetCurrency": targetCurrency
+                            }
+                        )
+
+                    if response.status_code < 500:
+                        return response.json()
+
+                    else:
+                        return jsonify(
+                            {
+                                "error": "Failed to get rate."
+                            }
+                        ), 500
+
+        except Exception as e:
+            return jsonify(
+                {
+                    "error": f"Failed to get rate: {e}"
+                }
+            ), 500
+
 
 @app.route('/', methods=['POST'])
 async def post_currency():

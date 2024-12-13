@@ -34,3 +34,8 @@ class PostgresConn:
         cursor = self.conn.cursor()
         cursor.execute("SELECT id, username, email FROM users")
         return cursor.fetchall()
+
+    def get_user_id(self, username):
+        cursor = self.conn.cursor()
+        cursor.execute(f"SELECT id FROM users WHERE username = '{username}'")
+        return cursor.fetchone()[0]

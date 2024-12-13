@@ -95,7 +95,7 @@ async def recalibrate_ring(new_cache_ring):
 async def update_ring():
     global cache_ring
 
-    sleep(5)
+    await sleep(10)
 
     while True:
         async with AsyncClient() as client:

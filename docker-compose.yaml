@@ -126,6 +126,10 @@ services:
       - QUART_RUN_PORT=$EXCHANGE_CACHE_PORT
       - SERVICE_DISCOVERY_HOST=service-discovery
       - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
+    deploy:
+      mode: replicated
+      replicas: 5
+      endpoint_mode: vip
 
   exchange-service:
     build: ./exchange-service

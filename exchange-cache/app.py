@@ -8,7 +8,7 @@ from hashlib import sha256
 
 
 RATE_LIFETIME = 60 * 60  # 1 hour
-CACHE_RING_UPDATE_INTERVAL = 60 * 1 # 1 minute
+CACHE_RING_UPDATE_INTERVAL = 30 # 30 seconds
 SERIVCE_DISCOVERY_URL = f"http://{environ['SERVICE_DISCOVERY_HOST']}:{environ['SERVICE_DISCOVERY_PORT']}/cache"
 PORT = environ['QUART_RUN_PORT']
 

@@ -66,21 +66,15 @@ async def recalibrate_ring(new_cache_ring):
 
     cache_ring = {int(cache_id): cache_info for cache_id, cache_info in new_cache_ring.items()}
 
-    print(f"Cache Ring: {cache_ring}")
-
     old_ids = cache_ids
     cache_ids = list(cache_ring.keys())
     cache_ids.sort()
     top_cache_id = cache_ids[(cache_ids.index(cache_id) - 1) % len(cache_ids)]
     bottom_cache_id = cache_ids[(cache_ids.index(cache_id) + 1) % len(cache_ids)]
 
-    print(f"Cache IDs: {cache_ids}")
-    print(f"Top Cache ID: {top_cache_id}")
-    print(f"Bottom Cache ID: {bottom_cache_id}")
-
     if old_ids != cache_ids:
-        top_server_url = f"http://{cache_ring[top_cache_id]['host']}:{cache_ring[top_cache_id]['port']}"
-        bottom_server_url = f"http://{cache_ring[bottom_cache_id]['host']}:{cache_ring[bottom_cache_id]['port']}"
+        top_server_url = f"http://{cache_ring[top_cache_id]}"
+        bottom_server_url = f"http://{cache_ring[bottom_cache_id]}"
         for baseCurrency, rates in exchange_rates.items():
             server = get_server(baseCurrency)
             if server != local_server_url:
@@ -102,6 +96,7 @@ async def update_ring():
 
         new_cache_ring = response.json()
         if new_cache_ring != cache_ring:
+            print("Recalibrating ring...")
             await recalibrate_ring(new_cache_ring)
 
         await sleep(CACHE_RING_UPDATE_INTERVAL)
@@ -235,10 +230,17 @@ async def post_currency():
     global exchange_rates
 
     try:
-        data = request.get_json()
+        data = await request.get_json()
+        backup = data.pop('backup', False)
+
         for baseCurrency, rates in data.items():
             target_server = get_server(baseCurrency)
-            if target_server == f"http://{gethostname()}:{PORT}":
+            if backup:
+                exchange_rates[baseCurrency.lower()] = {rate.lower(): value for rate, value in rates.items()}
+                exchange_rates[baseCurrency.lower()]["last_updated"] = datetime.timestamp(datetime.now())
+                print(f"Backed up {baseCurrency} rates: {rates}")
+
+            elif target_server == f"http://{gethostname()}:{PORT}":
                 exchange_rates[baseCurrency.lower()] = {rate.lower(): value for rate, value in rates.items()}
                 exchange_rates[baseCurrency.lower()]["last_updated"] = datetime.timestamp(datetime.now())
                 print(f"Updated {baseCurrency} rates: {rates}")
@@ -247,20 +249,15 @@ async def post_currency():
                     async with AsyncClient() as client:
                         await client.post(
                             f"{top_server_url}/",
-                            json={baseCurrency: rates}
+                            json={baseCurrency: rates, 'backup': True}
                         )
 
                 if local_server_url != bottom_server_url and bottom_server_url != top_server_url:
                     async with AsyncClient() as client:
                         await client.post(
                             f"{bottom_server_url}/",
-                            json={baseCurrency: rates}
+                            json={baseCurrency: rates, 'backup': True}
                         )
-
-            elif target_server == top_server_url or target_server == bottom_server_url:
-                exchange_rates[baseCurrency.lower()] = {rate.lower(): value for rate, value in rates.items()}
-                exchange_rates[baseCurrency.lower()]["last_updated"] = datetime.timestamp(datetime.now())
-                print(f"Backed up {baseCurrency} rates: {rates}")
 
             else:
                 try:

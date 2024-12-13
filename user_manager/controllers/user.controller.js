@@ -179,80 +179,6 @@ User.internalUpdateBalance = async (req, res) => {
     }
 };
 
-User.secureGetTransferHistory = async (req, res) => {
-    if (!req.get('Authorization')) {
-        return res.status(401).send({ message: 'Unauthorized' });
-    }
-
-    try {
-        const token = req.get('Authorization').split(' ')[1];
-        const decoded = verifyUserToken(token);
-        const username = decoded.username;
-
-        const result = await session.run(
-            `
-            MATCH (user:User {username: $username})
-            OPTIONAL MATCH (user)-[outgoing:TRANSFERRED]->(recipient:User)
-            OPTIONAL MATCH (sender:User)-[incoming:TRANSFERRED]->(user)
-            RETURN user, 
-                   collect({recipient: recipient.username, amount: outgoing.amount, timestamp: outgoing.timestamp}) AS outgoingTransfers, 
-                   collect({sender: sender.username, amount: incoming.amount, timestamp: incoming.timestamp}) AS incomingTransfers
-            `,
-            { username }
-        );
-
-        if (result.records.length === 0) {
-            return res.status(404).send({ message: 'User Not found.' });
-        }
-
-        const record = result.records[0];
-        const transfers = [];
-
-        // Process outgoing transfers (positive amounts)
-        const outgoingTransfers = record.get('outgoingTransfers');
-        outgoingTransfers.forEach(transfer => {
-            if (transfer.recipient && transfer.timestamp) {
-                transfers.push({
-                    timestamp: transfer.timestamp,
-                    transfer: `${transfer.recipient} -${transfer.amount}`
-                });
-            }
-        });
-
-        // Process incoming transfers (negative amounts)
-        const incomingTransfers = record.get('incomingTransfers');
-        incomingTransfers.forEach(transfer => {
-            if (transfer.sender && transfer.timestamp) {
-                transfers.push({
-                    timestamp: transfer.timestamp,
-                    transfer: `${transfer.sender} +${transfer.amount}`
-                });
-            }
-        });
-
-        transfers.sort((a, b) => {
-            if (a.timestamp < b.timestamp) {
-                return -1;
-            }
-            if (a.timestamp > b.timestamp) {
-                return 1;
-            }
-            return 0;
-        })
-
-        res.status(200).send({
-            username: username,
-            transfers: transfers.reduce((acc, t) => {
-                acc[t.timestamp] = t.transfer;
-                return acc;
-            }, {})
-        });
-    } catch (err) {
-        console.log(err);
-        res.status(500).send({ message: err.message });
-    }
-};
-
 User.internalTransfer = async (req, res) => {
     if (!req.get('Authorization')) {
         return res.status(401).send({ message: 'Unauthorized' });
@@ -281,43 +207,6 @@ User.internalTransfer = async (req, res) => {
         await User.update({ balance: parseInt(receiverData.balance) + parseInt(req.body.amount) }, { where: { username: req.body.username } });
 
         res.status(200).send({ message: 'Transfer successful.' });
-    } catch (err) {
-        console.log(err);
-        res.status(500).send({ message: err.message });
-    }
-};
-
-User.internalTransferLog = async (req, res) => {
-    if (!req.get('Authorization')) {
-        return res.status(401).send({ message: 'Unauthorized' });
-    }
-
-    try {
-        try{
-            const token = req.get('Authorization').split(' ')[1];
-            const decoded = verifyInternalToken(token);
-            if (decoded.server != 'Gateway') {
-                return res.status(401).send({ message: 'Unauthorized' });
-            }
-        } catch (err) {
-            return res.status(401).send({ message: 'Unauthorized' });
-        }
-
-        if (!req.body.sender || !req.body.receiver || !req.body.amount) {
-            return res.status(400).send({ message: 'Missing required fields.' });
-        }
-
-        const transferResult = await session.run(
-            `
-            MERGE (from:User {username: $sender})
-            MERGE (to:User {username: $receiver})
-            CREATE (from)-[:TRANSFERRED {amount: $amount, timestamp: timestamp()}]->(to)
-            RETURN from, to
-            `,
-            { sender: req.body.sender, receiver: req.body.receiver, amount: req.body.amount }
-        );
-
-        res.status(200).send({ message: 'Transfer logged successfully.' });
     } catch (err) {
         console.log(err);
         res.status(500).send({ message: err.message });

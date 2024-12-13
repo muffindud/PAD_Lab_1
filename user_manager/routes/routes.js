@@ -13,14 +13,11 @@ module.exports = app => {
     router.post('/register', executeWithTimeout(users.secureCreate));
     router.get('/login', executeWithTimeout(users.secureLogin));
     router.get('/profile', executeWithTimeout(users.secureFind));
-    // router.post('/transfer', executeWithTimeout(users.secureTransfer));
-    router.get('/transfer', executeWithTimeout(users.secureGetTransferHistory));
 
     // Internal endpoints
     router.get('/balance/:user_id', users.internalBalance);
     router.put('/balance/:user_id', users.internalUpdateBalance);
     router.put('/transfer', executeWithTimeout(users.internalTransfer));
-    router.post('/transfer', executeWithTimeout(users.internalTransferLog));
 
     // Health check
     router.get('/health', (req, res) => {

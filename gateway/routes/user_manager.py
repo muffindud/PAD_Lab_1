@@ -1,5 +1,6 @@
 from app import app, get_service_registry
 from src.request_handler import handle_request, NoServiceError, ServiceError
+from exchange_service import exchange_service_breaker, get_round_robin_exchange_service
 
 from quart import request, jsonify
 from quart_rate_limiter import rate_limit
@@ -92,7 +93,6 @@ async def login():
         return jsonify({'error': f'Failed to handle request: {e}'}), 503
 
 
-
 @app.route('/profile', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def profile():
@@ -120,7 +120,6 @@ async def profile():
     except Exception as e:
         print(f'Failed to handle request: {e}')
         return jsonify({'error': f'Failed to handle request: {e}'}), 503
-
 
 
 @app.route('/transfer', methods=['POST'])
@@ -164,11 +163,11 @@ async def transfer():
         print(f'Added amount to destination user: {response.text}')
         task_stack.append('add')
 
-        response = await user_manager_breaker.call_async(
+        response = await exchange_service_breaker.call_async(
             func=handle_request,
-            path=f'/transfer',
+            path=f'/api/transfer',
             method='POST',
-            host_get=get_round_robin_user_manager,
+            host_get=get_round_robin_exchange_service,
             service_name=service_name,
             headers={'Authorization': f'Bearer {server_token}'},
             data={"sender": source_username, "receiver": data['username'], "amount": data['amount']}
@@ -221,30 +220,3 @@ async def transfer():
                 print(f'Failed to rollback task {task}: {e}')
 
         return jsonify({'error': f'Failed to handle request: {e}'}), 500
-
-@app.route('/transfer', methods=['GET'])
-@rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
-async def get_transfers():
-    try:
-        response = await user_manager_breaker.call_async(
-            func=handle_request,
-            path=f'/transfer',
-            method='GET',
-            host_get=get_round_robin_user_manager,
-            service_name=service_name,
-            headers={'Authorization': request.headers['Authorization']}
-        )
-        return jsonify(loads(response.text)), response.status_code
-
-    except NoServiceError:
-        return jsonify({'error': f'No {service_name} services available'}), 503
-
-    except ServiceError:
-        return jsonify({'error': f'Failed to handle request on {service_name} services.'}), 503
-
-    except CircuitBreakerError:
-        return jsonify({'error': f'{service_name} circuit breaker open'}), 503
-
-    except Exception as e:
-        print(f'Failed to handle request: {e}')
-        return jsonify({'error': f'Failed to handle request: {e}'}), 503

@@ -1,28 +1,16 @@
-const express = require("express");
 const axios = require("axios");
-const router = express.Router();
+const router = require("express").Router();
 
 const cacheDiscoveryUrl = `http://${process.env.SERVICE_DISCOVERY_HOST}:${process.env.SERVICE_DISCOVERY_PORT}/cache`;
 var cacheServers = [];
+var cacheServerIndex = 0;
 
 setInterval(() => {
-  cacheServers = fetch(
-    cacheDiscoveryUrl,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  )
-    .then((response) => response.json())
-    .then((data) => {
-      return Object.values(data);
-    })
-    .catch((error) => {
-      console.error("Error fetching cache servers from service discovery", error);
-    });
-}, 15000);
+  axios.get(cacheDiscoveryUrl)
+  .then((response) => {
+    cacheServers = Object.values(response.data);
+  })
+}, 10000);
 
 const requestWithTimeout = (url, timeout = 10000) => {
   return Promise.race([
@@ -32,6 +20,12 @@ const requestWithTimeout = (url, timeout = 10000) => {
     ),
   ]);
 };
+
+const getCacheServer = () => {
+  const cacheServer = cacheServers[cacheServerIndex];
+  cacheServerIndex = (cacheServerIndex + 1) % cacheServers.length;
+  return cacheServer;
+}
 
 router.get("/exchange-rate", async (req, res) => {
   const { baseCurrency, targetCurrency } = req.query;
@@ -47,7 +41,7 @@ router.get("/exchange-rate", async (req, res) => {
   }
 
   try {
-    const apiUrl = `http://${process.env.EXCHANGE_CACHE_HOST}:${process.env.EXCHANGE_CACHE_PORT}/?baseCurrency=${baseCurrency}&targetCurrency=${targetCurrency}`;
+    const apiUrl = `http://${getCacheServer()}/?baseCurrency=${baseCurrency}&targetCurrency=${targetCurrency}`;
     const response = await requestWithTimeout(apiUrl);
     const exchangeRate = response.data.rate;
 
@@ -74,8 +68,7 @@ router.get("/exchange-rate", async (req, res) => {
     if (rates && rates[targetCurrency]) {
       const exchangeRate = rates[targetCurrency];
 
-      // store the exchange rate in the exchange-cache service
-      const cacheUrl = `http://${process.env.EXCHANGE_CACHE_HOST}:${process.env.EXCHANGE_CACHE_PORT}/`;
+      const cacheUrl = `http://${getCacheServer()}/`;
       try {
         await axios.post(cacheUrl, {
           [baseCurrency]: rates,

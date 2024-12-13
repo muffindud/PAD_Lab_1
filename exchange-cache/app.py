@@ -185,15 +185,25 @@ async def post_currency():
 
         for baseCurrency, rates in exchange_rates.items():
             if get_server(baseCurrency) != f"http://{gethostname()}:{PORT}":
-                with AsyncClient() as client:
-                    await client.post(
-                        f"{top_server_url}/",
-                        json={baseCurrency: rates}
-                    )
-                    await client.post(
-                        f"{bottom_server_url}/",
-                        json={baseCurrency: rates}
-                    )
+                try:
+                    if local_server_url != top_server_url:
+                        async with AsyncClient() as client:
+                            await client.post(
+                                f"{top_server_url}/",
+                                json={baseCurrency: rates}
+                            )
+                except Exception as e:
+                    print(f"Failed to update {top_server_url}: {e}")
+
+                try:
+                    if local_server_url != bottom_server_url and bottom_server_url != top_server_url:
+                        async with AsyncClient() as client:
+                            await client.post(
+                                f"{bottom_server_url}/",
+                                json={baseCurrency: rates}
+                            )
+                except Exception as e:
+                    print(f"Failed to update {bottom_server_url}: {e}")
 
         return jsonify(
             {

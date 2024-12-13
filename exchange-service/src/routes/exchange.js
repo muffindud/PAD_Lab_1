@@ -2,6 +2,28 @@ const express = require("express");
 const axios = require("axios");
 const router = express.Router();
 
+const cacheDiscoveryUrl = `http://${process.env.SERVICE_DISCOVERY_HOST}:${process.env.SERVICE_DISCOVERY_PORT}/cache`;
+var cacheServers = [];
+
+setInterval(() => {
+  cacheServers = fetch(
+    cacheDiscoveryUrl,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  )
+    .then((response) => response.json())
+    .then((data) => {
+      return Object.values(data);
+    })
+    .catch((error) => {
+      console.error("Error fetching cache servers from service discovery", error);
+    });
+}, 15000);
+
 const requestWithTimeout = (url, timeout = 10000) => {
   return Promise.race([
     axios.get(url),

@@ -4,9 +4,7 @@ from asyncio import create_task, sleep
 from httpx import AsyncClient
 from socket import gethostname
 from os import environ
-from threading import Lock
 from hashlib import sha256
-from bisect import bisect_right
 
 
 RATE_LIFETIME = 60 * 60  # 1 hour
@@ -39,23 +37,20 @@ ring_updater_task = None
 local_server_url = None
 cache_id = None
 cache_ring = {}
-cache_ring_lock = Lock()
 cache_ids = []
-cache_ids_lock = Lock()
 top_cache_id = None
 top_server_url = None
 bottom_cache_id = None
 bottom_server_url = None
 
 
-async def hash(value: str) -> int:
-    return int(sha256(value.encode('utf-8')).hexdigest(), 16)
+def hash(value: str) -> int:
+    return int(sha256(value.encode()).hexdigest()[-8:], 16)
 
 
-async def get_server(baseCurrency: str) -> str:
-    server_key = cache_ids[bisect_right(cache_ids, hash(baseCurrency)) % len(cache_ids)]
-
-    return f"http://{cache_ring[server_key]['host']}:{cache_ring[server_key]['port']}"
+def get_server(baseCurrency: str) -> str:
+    server_key = cache_ids[hash(baseCurrency) % len(cache_ids)]
+    return f"http://{cache_ring[server_key]}"
 
 
 async def recalibrate_ring(new_cache_ring):
@@ -69,15 +64,19 @@ async def recalibrate_ring(new_cache_ring):
 
     old_ids = None
 
-    async with cache_ring_lock:
-        cache_ring = {int(cache_id, 16): cache_info for cache_id, cache_info in new_cache_ring.items()}
+    cache_ring = {int(cache_id): cache_info for cache_id, cache_info in new_cache_ring.items()}
 
-    async with cache_ids_lock:
-        old_ids = [cid for cid in cache_ids]
-        cache_ids = list([int(cache_id, 16) for cache_id in cache_ring.keys()])
-        cache_ids.sort()
-        top_cache_id = cache_ids[(bisect_right(cache_ids, cache_id) + 1) % len(cache_ids)]
-        bottom_cache_id = cache_ids[(bisect_right(cache_ids, cache_id) - 1) % len(cache_ids)]
+    print(f"Cache Ring: {cache_ring}")
+
+    old_ids = cache_ids
+    cache_ids = list(cache_ring.keys())
+    cache_ids.sort()
+    top_cache_id = cache_ids[(cache_ids.index(cache_id) - 1) % len(cache_ids)]
+    bottom_cache_id = cache_ids[(cache_ids.index(cache_id) + 1) % len(cache_ids)]
+
+    print(f"Cache IDs: {cache_ids}")
+    print(f"Top Cache ID: {top_cache_id}")
+    print(f"Bottom Cache ID: {bottom_cache_id}")
 
     if old_ids != cache_ids:
         top_server_url = f"http://{cache_ring[top_cache_id]['host']}:{cache_ring[top_cache_id]['port']}"
@@ -100,9 +99,10 @@ async def update_ring():
     while True:
         async with AsyncClient() as client:
             response = await client.get(SERIVCE_DISCOVERY_URL)
-            new_cache_ring = response.json()
-            if new_cache_ring != cache_ring:
-                await recalibrate_ring(new_cache_ring)
+
+        new_cache_ring = response.json()
+        if new_cache_ring != cache_ring:
+            await recalibrate_ring(new_cache_ring)
 
         await sleep(CACHE_RING_UPDATE_INTERVAL)
 
@@ -123,9 +123,7 @@ async def startup():
             })
 
         global cache_id
-        cid = str(response.json()['cache_id'])
-        print(f"Cache ID: {cid}")
-        cache_id = int(cid, 16)
+        cache_id = int(response.json()['cache_id'])
 
     global ring_updater_task
     ring_updater_task = create_task(update_ring())

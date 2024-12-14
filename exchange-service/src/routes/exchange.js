@@ -42,23 +42,28 @@ router.get("/exchange-rate", async (req, res) => {
     return res.json({ baseCurrency, targetCurrency, exchangeRate: 1 });
   }
 
-  try {
-    const apiUrl = `http://${getCacheServer()}/?baseCurrency=${baseCurrency}&targetCurrency=${targetCurrency}`;
-    const response = await requestWithTimeout(apiUrl);
-    const exchangeRate = response.data.rate;
-
-    return res.json({
-      baseCurrency,
-      targetCurrency,
-      exchangeRate,
-    });
-  } catch (error) {
-    if (error.response && error.response.status === 404) {
-      console.log(`Exchange rate for ${baseCurrency} to ${targetCurrency} not found in cache. Fetching from currency-api...`);
-    } else {
-      return res
-        .status(500)
-        .json({ message: "Error fetching exchange rate." + error.message });
+  let tries = 0;
+  while (tries < cacheServers.length) {
+    tries++;
+    try {
+      const apiUrl = `http://${getCacheServer()}/?baseCurrency=${baseCurrency}&targetCurrency=${targetCurrency}`;
+      const response = await requestWithTimeout(apiUrl);
+      const exchangeRate = response.data.rate;
+      return res.json({
+        baseCurrency,
+        targetCurrency,
+        exchangeRate,
+      });
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        console.log(`Exchange rate for ${baseCurrency} to ${targetCurrency} not found in cache. Fetching from currency-api...`);
+        break;
+      }
+      // else {
+      //   return res
+      //     .status(500)
+      //     .json({ message: "Error fetching exchange rate." + error.message });
+      // }
     }
   }
 

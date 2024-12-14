@@ -27,7 +27,7 @@ class PostgresConn:
 
     def get_data_since_last_id(self, last_id):
         cursor = self.conn.cursor()
-        cursor.execute(f"SELECT id, username, email FROM users WHERE id > {last_id}")
+        cursor.execute(f"SELECT id, username, email FROM users WHERE id >= {last_id}")
         return cursor.fetchall()
 
     def get_all_data(self):

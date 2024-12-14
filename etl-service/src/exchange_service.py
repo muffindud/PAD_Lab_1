@@ -49,7 +49,7 @@ class Neo4jConn:
         with self.driver:
             result = self.driver.execute_query(f"""
                 MATCH (from)-[t:TRANSFERRED]->(to)
-                WHERE t.timestamp > {last_ts}
+                WHERE t.timestamp >= {last_ts}
                 RETURN from, to, t
             """)
 

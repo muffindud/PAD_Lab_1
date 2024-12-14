@@ -1,17 +1,24 @@
 from app import app, get_service_registry
+from src.request_handler import handle_request, NoServiceError, ServiceError
+
 from websockets import connect as create_connection
 from quart import websocket, Websocket, request, jsonify
 from quart_rate_limiter import rate_limit
 from asyncio import gather
-from httpx import AsyncClient
 from json import loads
-from jwt import decode
+from jwt import decode, encode
+from pybreaker import CircuitBreaker, CircuitBreakerError
+from httpx import get
+
+
+game_lobby_breaker = CircuitBreaker(fail_max=app.config['FAIL_MAX'], reset_timeout=app.config['RESET_TIMEOUT'])
+service_name = 'Game Lobby'
 
 
 round_robin_index = 0
 def get_round_robin_game_lobby_service() -> str:
     global round_robin_index
-    service_registry = get_service_registry('Game Lobby')
+    service_registry = get_service_registry(service_name)
 
     # If there are no game lobby services, return None
     if len(service_registry) == 0:
@@ -123,7 +130,7 @@ async def lobby_to_client(client_sock: Websocket, lobby_sock):
         await client_sock.close(err_code)
 
 
-@app.websocket('/connect/<int:id>')
+@app.websocket('/lobby/<int:id>')
 async def connect(id):
     auth_header = websocket.headers.get('Authorization')
     # username = decode(auth_header.split(' ')[1], options={"verify_signature": False}, algorithms=['HS256'])['username']
@@ -154,24 +161,74 @@ async def connect(id):
     )
 
 
+def get_lobby(url: str) -> dict:
+    try:
+        token = encode({'server': 'Gateway'}, app.config['INTERNAL_JWT_SECRET'], algorithm='HS256')
+        response = get(url, headers={'Authorization': f'Bearer {token}'})
+        if response.status_code != 200:
+            return {}
+        return response.json()
+    except Exception as e:
+        print(f'Error getting lobbies {url}: {e}')
+        return {}
+
+
+def get_lobby_host(lobby_id: int) -> str:
+    game_lobbies = get_service_registry('Game Lobby')
+    for _, host in game_lobbies.items():
+        lobbies = get_lobby(f'http://{host}/lobby')
+        if not lobbies:
+            continue
+        if str(lobby_id) in lobbies['lobbies'].keys():
+            return lobbies['port']
+
+    host = get_round_robin_game_lobby_service()
+    l = get_lobby(f'http://{host}/lobby')
+    print(l)
+    return l['port']
+
+
+@app.route('/connect/<int:id>', methods=['GET'])
+@rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
+async def get_connect(id):
+    auth_header = request.headers['Authorization']
+    username = decode(auth_header.split(' ')[1], algorithms='HS256', key=app.config['USER_JWT_SECRET'])['username']
+
+    port = get_lobby_host(id)
+
+    if not port:
+        return jsonify({'error': 'No lobbies available'}), 503
+
+    return jsonify(
+        {
+            'url': f'ws://{app.config["GAME_LOBBY_HOST"]}:{port}/connect/{id}'
+        }
+    ), 200
+
+
 @app.route('/logs', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def logs():
-    host = get_round_robin_game_lobby_service()
-
-    if host is None:
-        return jsonify({'error': 'No game lobby services available'}), 503
-
-    async with AsyncClient(timeout=30.0) as client:
-        response = await client.request(
+    try:
+        response = await game_lobby_breaker.call_async(
+            func=handle_request,
+            path=f'/logs',
             method='GET',
-            url=f'http://{host}/logs',
+            host_get=get_round_robin_game_lobby_service,
+            service_name=service_name,
             headers={'Authorization': request.headers['Authorization']}
         )
+        return jsonify(loads(response.text)), response.status_code
 
-    try:
-        r = jsonify(loads(response.text)), response.status_code
+    except NoServiceError:
+        return jsonify({'error': f'No {service_name} services available'}), 503
+
+    except ServiceError:
+        return jsonify({'error': f'Failed to handle request on {service_name} services'}), 503
+
+    except CircuitBreakerError:
+        return jsonify({'error': f'{service_name} circuit breaker open'}), 503
+
     except Exception as e:
-        r = response.text, response.status_code
-
-    return r
+        print(f'Failed to handle request: {e}')
+        return jsonify({'error': f'Failed to handle request: {e}'}), 503

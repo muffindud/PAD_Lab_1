@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "gateway"
+    static_configs:
+      - targets:
+          - "host.docker.internal:8080"
+
+  - job_name: "service-discovery"
+    static_configs:
+      - targets:
+          - "host.docker.internal:4000"
+
+  - job_name: "game-lobby"
+    http_sd_configs:
+      - url: 'http://host.docker.internal:4000/target/game-lobby'
+
+  - job_name: "user-manager"
+    http_sd_configs:
+      - url: 'http://host.docker.internal:4000/target/user-manager'
+
+  - job_name: "exchange-service"
+    http_sd_configs:
+      - url: 'http://host.docker.internal:4000/target/exchange-service'

@@ -6,12 +6,15 @@ import com.example.domain.ports.GameLogRepository
 import io.ktor.websocket.*
 
 class Lobby(val lobbyId: String, val logRepository: GameLogRepository, val deleteLobbyInstanceCallback: () -> Unit) {
-    val clients = mutableListOf<DefaultWebSocketSession>()
+    val clients = mutableMapOf<DefaultWebSocketSession, String>()
     val gameManager: GameManager = GameManager()
     val gameLog: MutableList<String> = mutableListOf()
 
-    fun addClient(client: DefaultWebSocketSession) {
-        clients.add(client)
+    fun addClient(client: DefaultWebSocketSession, username: String) {
+        clients.put(client, username)
+    }
+    fun getUsernames(): List<String> {
+        return clients.values.toList()
     }
 
     suspend fun removeClient(client: DefaultWebSocketSession) {
@@ -27,8 +30,9 @@ class Lobby(val lobbyId: String, val logRepository: GameLogRepository, val delet
         }
     }
 
-    suspend fun handleCommand(command: String, client: DefaultWebSocketSession, username: String? = null) {
+    suspend fun handleCommand(command: String, client: DefaultWebSocketSession) {
         // TODO: Handle commands
+        val username = clients[client]
         if (username == null) {
             broadcast(command)
         } else {
@@ -38,7 +42,7 @@ class Lobby(val lobbyId: String, val logRepository: GameLogRepository, val delet
     }
 
     suspend fun broadcast(message: String) {
-        clients.forEach { client ->
+        clients.forEach { (client, _) ->
             client.send(message)
         }
     }

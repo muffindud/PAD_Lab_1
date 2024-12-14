@@ -1,4 +1,5 @@
 from flask import Flask, jsonify
+from prometheus_flask_exporter import PrometheusMetrics
 from threading import Thread, Lock, Timer
 from atexit import register
 from requests import get
@@ -43,9 +44,15 @@ services: dict = {}
 data_lock = Lock()
 timer = Timer(0, lambda: None, ())
 
+cache_keys = []
+cache_keys_lock = Lock()
+
 
 def create_app():
     app = Flask(__name__)
+    metrics = PrometheusMetrics(app)
+
+    metrics.info('app_info', 'Application info')
 
     # Register the interrupt function to stop the health check timer
     def interrupt():
@@ -121,3 +128,5 @@ def create_app():
 
 app = create_app()
 import routes.service_discovery
+import routes.targets
+import routes.cache_discovery

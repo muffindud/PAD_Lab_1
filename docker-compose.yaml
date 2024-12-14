@@ -1,7 +1,6 @@
 services:
   user_manager_db:
     image: postgres:13
-    restart: always
     user: ${DB_USER}
     volumes:
       - db_data:/var/lib/postgresql/data
@@ -15,9 +14,23 @@ services:
       - POSTGRES_PASSWORD=$DB_PASS
       - POSTGRES_DB=$DB_NAME
 
+  data_warehouse_db:
+    image: postgres:13
+    user: ${DB_WH_USER}
+    volumes:
+      - db_wh_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_WH_USER}"]
+      interval: 2s
+      timeout: 1s
+      retries: 5
+    environment:
+      - POSTGRES_USER=$DB_WH_USER
+      - POSTGRES_PASSWORD=$DB_WH_PASS
+      - POSTGRES_DB=$DB_WH_NAME
+
   user_manager_transfer_db:
     image: neo4j:4.2
-    restart: always
     environment:
       - NEO4J_AUTH=${NEO4J_USER}/${NEO4J_PASS}
     volumes:
@@ -28,7 +41,6 @@ services:
 
   game_lobby_logs_db:
     image: mongo:4.4
-    restart: always
     environment:
       - MONGO_INITDB_ROOT_USERNAME=$MONGO_ROOT_USER
       - MONGO_INITDB_ROOT_PASSWORD=$MONGO_ROOT_PASS
@@ -43,6 +55,7 @@ services:
       - FLASK_RUN_PORT=$SERVICE_DISCOVERY_PORT
       - FLASK_RUN_HOST=0.0.0.0
       - PYTHONUNBUFFERED=1
+      - GAME_LOBBY_PORT=$GAME_LOBBY_PORT
 
   gateway:
     build: ./gateway
@@ -57,13 +70,14 @@ services:
       - QUART_RUN_HOST=0.0.0.0
       - PYTHONUNBUFFERED=1
       - USER_JWT_SECRET=$USER_MANAGER_JWT_USER_SECRET
+      - INTERNAL_JWT_SECRET=$JWT_INTERNAL_SECRET
+      - GAME_LOBBY_HOST=$GAME_LOBBY_HOST
 
   user_manager:
     build: ./user_manager
     depends_on:
       - service-discovery
       - user_manager_db
-      - user_manager_transfer_db
     environment:
       - SERVICE_DISCOVERY_HOST=service-discovery
       - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
@@ -72,27 +86,20 @@ services:
       - DB_USER=$DB_USER
       - DB_PASS=$DB_PASS
       - DB_NAME=$DB_NAME
-      - NEO4J_BOLT_PORT=$NEO4J_BOLT_PORT
-      - NEO4J_BROWSER_PORT=$NEO4J_BROWSER_PORT
-      - NEO4J_USER=$NEO4J_USER
-      - NEO4J_PASS=$NEO4J_PASS
-      - NEO4J_HOST=user_manager_transfer_db
-      - NEO4J_DATABASE=$NEO4J_DATABASE
       - PORT=$USER_MANAGER_PORT
       - JWT_USER_SECRET=$USER_MANAGER_JWT_USER_SECRET
       - JWT_INTERNAL_SECRET=$JWT_INTERNAL_SECRET
     deploy:
       mode: replicated
-      replicas: 3
+      replicas: 1
       endpoint_mode: vip
 
   game_lobby:
     build: ./game_lobby
     depends_on:
       - service-discovery
-    # depends_on:
-    #   user_manager:
-    #     condition: service_healthy
+    ports:
+      - "$GAME_LOBBY_PORT"
     environment:
       - SERVICE_DISCOVERY_HOST=service-discovery
       - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
@@ -106,6 +113,10 @@ services:
       - MONGO_DB_NAME=$MONGO_DB_NAME
       - MONGO_ROOT_USER=$MONGO_ROOT_USER
       - MONGO_ROOT_PASS=$MONGO_ROOT_PASS
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     deploy:
       mode: replicated
       replicas: 3
@@ -113,30 +124,109 @@ services:
 
   exchange-cache:
     build: ./exchange-cache
+    depends_on:
+      - service-discovery
     environment:
-      - FLASK_RUN_HOST=0.0.0.0
-      - FLASK_RUN_PORT=$EXCHANGE_CACHE_PORT
+      - QUART_RUN_HOST=0.0.0.0
+      - QUART_RUN_PORT=$EXCHANGE_CACHE_PORT
+      - SERVICE_DISCOVERY_HOST=service-discovery
+      - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
+    deploy:
+      mode: replicated
+      replicas: 5
+      endpoint_mode: vip
 
   exchange-service:
     build: ./exchange-service
     depends_on:
       - service-discovery
       - exchange-cache
+      - user_manager_transfer_db
     environment:
       - SERVICE_DISCOVERY_HOST=service-discovery
       - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
       - PORT=$EXCHANGE_SERVICE_PORT
       - EXCHANGE_CACHE_HOST=exchange-cache
       - EXCHANGE_CACHE_PORT=$EXCHANGE_CACHE_PORT
+      - NEO4J_BOLT_PORT=$NEO4J_BOLT_PORT
+      - NEO4J_BROWSER_PORT=$NEO4J_BROWSER_PORT
+      - NEO4J_USER=$NEO4J_USER
+      - NEO4J_PASS=$NEO4J_PASS
+      - NEO4J_HOST=user_manager_transfer_db
+      - NEO4J_DATABASE=$NEO4J_DATABASE
+      - JWT_USER_SECRET=$USER_MANAGER_JWT_USER_SECRET
+      - JWT_INTERNAL_SECRET=$JWT_INTERNAL_SECRET
     deploy:
       mode: replicated
       replicas: 3
       endpoint_mode: vip
 
+  etl-service:
+    build: ./etl-service
+    depends_on:
+      - user_manager_db
+      - data_warehouse_db
+      - user_manager_transfer_db
+      - game_lobby_logs_db
+    environment:
+      - USER_MANAGER_DB_HOST=user_manager_db
+      - USER_MANAGER_DB_PORT=$DB_PORT
+      - USER_MANAGER_DB_USER=$DB_USER
+      - USER_MANAGER_DB_PASS=$DB_PASS
+      - USER_MANAGER_DB_NAME=$DB_NAME
+      - DATA_WAREHOUSE_DB_HOST=data_warehouse_db
+      - DATA_WAREHOUSE_DB_PORT=$DB_PORT
+      - DATA_WAREHOUSE_DB_USER=$DB_WH_USER
+      - DATA_WAREHOUSE_DB_PASS=$DB_WH_PASS
+      - DATA_WAREHOUSE_DB_NAME=$DB_WH_NAME
+      - EXCHANGE_SERVICE_TRANSFER_DB_HOST=user_manager_transfer_db
+      - EXCHANGE_SERVICE_TRANSFER_DB_PORT=$NEO4J_BOLT_PORT
+      - EXCHANGE_SERVICE_TRANSFER_DB_USER=$NEO4J_USER
+      - EXCHANGE_SERVICE_TRANSFER_DB_PASS=$NEO4J_PASS
+      - EXCHANGE_SERVICE_TRANSFER_DB_NAME=$NEO4J_DATABASE
+      - GAME_LOBBY_LOGS_DB_HOST=game_lobby_logs_db
+      - GAME_LOBBY_LOGS_DB_PORT=$MONGO_PORT
+      - GAME_LOBBY_LOGS_DB_USER=$MONGO_ROOT_USER
+      - GAME_LOBBY_LOGS_DB_PASS=$MONGO_ROOT_PASS
+      - GAME_LOBBY_LOGS_DB_NAME=$MONGO_DB_NAME
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "$PROMETHEUS_PORT:$PROMETHEUS_PORT"
+    depends_on:
+      - service-discovery
+      - gateway
+      - user_manager
+      - game_lobby
+      - exchange-service
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yaml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yaml'
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "$GRAFANA_PORT:3000"
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_USER=$GRAFANA_USER
+      - GF_SECURITY_ADMIN_PASSWORD=$GRAFANA_PASS
+    volumes:
+      - grafana_data:/var/lib/grafana
+
 volumes:
   db_data:
+  db_wh_data:
   lobby_log:
   neo4j_data:
   neo4j_logs:
   neo4j_config:
   neo4j_plugins:
+  prometheus_data:
+  grafana_data:

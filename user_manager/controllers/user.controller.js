@@ -3,7 +3,6 @@ const db = require('../models');
 const User = db.users;
 const Op = db.Sequelize.Op;
 const { generateUserToken, verifyUserToken, verifyInternalToken } = require('../utils/authJwt');
-const session = require('../neo4j');
 
 User.secureCreate = async (req, res) => {
     try {
@@ -59,6 +58,9 @@ User.secureFind = async (req, res) => {
 
     try {
         const token = req.get('Authorization').split(' ')[1];
+        if (!token) {
+            return res.status(401).send({ message: 'Unauthorized' });
+        }
         const decoded = verifyUserToken(token);
 
         const user = await User.findOne({ where: { username: decoded.username } });
@@ -176,74 +178,34 @@ User.internalUpdateBalance = async (req, res) => {
     }
 };
 
-User.secureGetTransferHistory = async (req, res) => {
+User.internalTransfer = async (req, res) => {
     if (!req.get('Authorization')) {
         return res.status(401).send({ message: 'Unauthorized' });
     }
 
     try {
-        const token = req.get('Authorization').split(' ')[1];
-        const decoded = verifyUserToken(token);
-        const username = decoded.username;
-
-        const result = await session.run(
-            `
-            MATCH (user:User {username: $username})
-            OPTIONAL MATCH (user)-[outgoing:TRANSFERRED]->(recipient:User)
-            OPTIONAL MATCH (sender:User)-[incoming:TRANSFERRED]->(user)
-            RETURN user, 
-                   collect({recipient: recipient.username, amount: outgoing.amount, timestamp: outgoing.timestamp}) AS outgoingTransfers, 
-                   collect({sender: sender.username, amount: incoming.amount, timestamp: incoming.timestamp}) AS incomingTransfers
-            `,
-            { username }
-        );
-
-        if (result.records.length === 0) {
-            return res.status(404).send({ message: 'User Not found.' });
+        try{
+            const token = req.get('Authorization').split(' ')[1];
+            const decoded = verifyInternalToken(token);
+            if (decoded.server != 'Gateway') {
+                return res.status(401).send({ message: 'Unauthorized' });
+            }
+        } catch (err) {
+            return res.status(401).send({ message: 'Unauthorized' });
         }
 
-        const record = result.records[0];
-        const transfers = [];
+        if (!req.body.username || !req.body.amount) {
+            return res.status(400).send({ message: 'Missing required fields.' });
+        }
 
-        // Process outgoing transfers (positive amounts)
-        const outgoingTransfers = record.get('outgoingTransfers');
-        outgoingTransfers.forEach(transfer => {
-            if (transfer.recipient && transfer.timestamp) {
-                transfers.push({
-                    timestamp: transfer.timestamp,
-                    transfer: `${transfer.recipient} -${transfer.amount}`
-                });
-            }
-        });
+        const receiverData = await User.findOne({ where: { username: req.body.username } });
+        if (!receiverData) {
+            return res.status(404).send({ message: 'Receiver Not found.' });
+        }
 
-        // Process incoming transfers (negative amounts)
-        const incomingTransfers = record.get('incomingTransfers');
-        incomingTransfers.forEach(transfer => {
-            if (transfer.sender && transfer.timestamp) {
-                transfers.push({
-                    timestamp: transfer.timestamp,
-                    transfer: `${transfer.sender} +${transfer.amount}`
-                });
-            }
-        });
+        await User.update({ balance: parseInt(receiverData.balance) + parseInt(req.body.amount) }, { where: { username: req.body.username } });
 
-        transfers.sort((a, b) => {
-            if (a.timestamp < b.timestamp) {
-                return -1;
-            }
-            if (a.timestamp > b.timestamp) {
-                return 1;
-            }
-            return 0;
-        })
-
-        res.status(200).send({
-            username: username,
-            transfers: transfers.reduce((acc, t) => {
-                acc[t.timestamp] = t.transfer;
-                return acc;
-            }, {})
-        });
+        res.status(200).send({ message: 'Transfer successful.' });
     } catch (err) {
         console.log(err);
         res.status(500).send({ message: err.message });

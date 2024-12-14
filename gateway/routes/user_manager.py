@@ -1,14 +1,22 @@
 from app import app, get_service_registry
-from httpx import AsyncClient
+from src.request_handler import handle_request, NoServiceError, ServiceError
+from routes.exchange_service import exchange_service_breaker, get_round_robin_exchange_service
+
 from quart import request, jsonify
 from quart_rate_limiter import rate_limit
 from json import loads
+from pybreaker import CircuitBreaker, CircuitBreakerError
+from jwt import decode, encode
+
+
+user_manager_breaker = CircuitBreaker(fail_max=app.config['FAIL_MAX'], reset_timeout=app.config['RESET_TIMEOUT'])
+service_name = 'User Manager'
 
 
 round_robin_index = 0
-def get_round_robin_exchange_service() -> str:
+def get_round_robin_user_manager() -> str:
     global round_robin_index
-    service_registry = get_service_registry('User Manager')
+    service_registry = get_service_registry(service_name)
 
     # If there are no user manager services, return None
     if len(service_registry) == 0:
@@ -32,114 +40,183 @@ def get_round_robin_exchange_service() -> str:
 @app.route('/register', methods=['POST'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def register():
-    host = get_round_robin_exchange_service()
-
-    if host is None:
-        return jsonify({'error': 'No user manager services available'}), 503
-
-    async with AsyncClient(timeout=30.0) as client:
-        response = await client.request(
-            method='POST',
-            url=f'http://{host}/register',
-            json=await request.get_json()
-        )
-
     try:
-        r = jsonify(loads(response.text)), response.status_code
-    except Exception as e:
-        r = response.text, response.status_code
+        response = await user_manager_breaker.call_async(
+            func=handle_request,
+            path=f'/register',
+            method='POST',
+            host_get=get_round_robin_user_manager,
+            service_name=service_name,
+            data=await request.get_json(),
+        )
+        return jsonify(loads(response.text)), response.status_code
 
-    return r
+    except NoServiceError:
+        return jsonify({'error': f'No {service_name} services available'}), 503
+
+    except ServiceError:
+        return jsonify({'error': f'Failed to handle request on {service_name} services.'}), 503
+
+    except CircuitBreakerError:
+        return jsonify({'error': f'{service_name} service is unavailable'}), 503
+
+    except Exception as e:
+        print(f'Failed to handle request: {e}')
+        return jsonify({'error': f'Failed to handle request: {e}'}), 503
 
 
 @app.route('/login', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def login():
-    host = get_round_robin_exchange_service()
-
-    if host is None:
-        return jsonify({'error': 'No user manager services available'}), 503
-
-    async with AsyncClient(timeout=30.0) as client:
-        response = await client.request(
-            method='GET',
-            url=f'http://{host}/login',
-            json=await request.get_json()
-        )
-
     try:
-        r = jsonify(loads(response.text)), response.status_code
-    except Exception as e:
-        r = response.text, response.status_code
+        response = await user_manager_breaker.call_async(
+            func=handle_request,
+            path=f'/login',
+            method='GET',
+            host_get=get_round_robin_user_manager,
+            service_name=service_name,
+            data=await request.get_json()
+        )
+        return jsonify(loads(response.text)), response.status_code
 
-    return r
+    except NoServiceError:
+        return jsonify({'error': f'No {service_name} services available'}), 503
+
+    except ServiceError:
+        return jsonify({'error': f'Failed to handle request on {service_name} services.'}), 503
+
+    except CircuitBreakerError:
+        return jsonify({'error': f'{service_name} circuit breaker open'}), 503
+
+    except Exception as e:
+        print(f'Failed to handle request: {e}')
+        return jsonify({'error': f'Failed to handle request: {e}'}), 503
 
 
 @app.route('/profile', methods=['GET'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def profile():
-    host = get_round_robin_exchange_service()
-
-    if host is None:
-        return jsonify({'error': 'No user manager services available'}), 503
-
-    async with AsyncClient(timeout=30.0) as client:
-        response = await client.request(
-            method='GET',
-            url=f'http://{host}/profile',
-            headers={'Authorization': request.headers['Authorization']}
-        )
-
     try:
-        r = jsonify(loads(response.text)), response.status_code
-    except Exception as e:
-        r = response.text, response.status_code
+        response = await user_manager_breaker.call_async(
+            func=handle_request,
+            path=f'/profile',
+            method='GET',
+            host_get=get_round_robin_user_manager,
+            service_name=service_name,
+            headers={'Authorization': request.headers['Authorization']},
+            data=await request.get_json()
+        )
+        return jsonify(loads(response.text)), response.status_code
 
-    return r
+    except NoServiceError:
+        return jsonify({'error': f'No {service_name} services available'}), 503
+
+    except ServiceError:
+        return jsonify({'error': f'Failed to handle request on {service_name} services.'}), 503
+
+    except CircuitBreakerError:
+        return jsonify({'error': f'{service_name} circuit breaker open'}), 503
+
+    except Exception as e:
+        print(f'Failed to handle request: {e}')
+        return jsonify({'error': f'Failed to handle request: {e}'}), 503
 
 
 @app.route('/transfer', methods=['POST'])
 @rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
 async def transfer():
-    host = get_round_robin_exchange_service()
+    task_stack: list[str] = []
+    data: dict = await request.get_json()
+    source_username: str = decode(request.headers['Authorization'].split(' ')[1], algorithms='HS256', key=app.config['USER_JWT_SECRET'])['username']
+    server_token: str = encode({'server': 'Gateway'}, app.config['INTERNAL_JWT_SECRET'], algorithm='HS256')
 
-    if host is None:
-        return jsonify({'error': 'No user manager services available'}), 503
+    try:
+        response = await user_manager_breaker.call_async(
+            func=handle_request,
+            path=f'/transfer',
+            method='PUT',
+            host_get=get_round_robin_user_manager,
+            service_name=service_name,
+            headers={'Authorization': f'Bearer {server_token}'},
+            data={"amount": -data['amount'], "username": source_username}
+        )
 
-    async with AsyncClient(timeout=30.0) as client:
-        response = await client.request(
+        if response.status_code >= 400:
+            raise Exception(f'Failed to subtract amount from source user: {response.text}')
+
+        print(f'Subtracted amount from source user: {response.text}')
+        task_stack.append('subtract')
+
+        response = await user_manager_breaker.call_async(
+            func=handle_request,
+            path=f'/transfer',
+            method='PUT',
+            host_get=get_round_robin_user_manager,
+            service_name=service_name,
+            headers={'Authorization': f'Bearer {server_token}'},
+            data={"amount": data['amount'], "username": data['username']}
+        )
+
+        if response.status_code >= 400:
+            raise Exception(f'Failed to add amount to destination user: {response.text}')
+
+        print(f'Added amount to destination user: {response.text}')
+        task_stack.append('add')
+
+        response = await exchange_service_breaker.call_async(
+            func=handle_request,
+            path=f'/api/transfer',
             method='POST',
-            url=f'http://{host}/transfer',
-            headers={'Authorization': request.headers['Authorization']},
-            json=await request.get_json()
+            host_get=get_round_robin_exchange_service,
+            service_name=service_name,
+            headers={'Authorization': f'Bearer {server_token}'},
+            data={"sender": source_username, "receiver": data['username'], "amount": data['amount']}
         )
 
-    try:
-        r = jsonify(loads(response.text)), response.status_code
+        if response.status_code >= 400:
+            raise Exception(f'Failed to create transfer record: {response.text}')
+
+        print(f'Created transfer record: {response.text}')
+        task_stack.append('create_log')
+
+        return jsonify(
+            {
+                'message': 'Transfer successful',
+                'username': data['username'],
+                'amount': data['amount']
+            }
+        ), 200
+
     except Exception as e:
-        r = response.text, response.status_code
+        print(f'Failed to handle request: {e}, rolling back...')
+        while task_stack:
+            task = task_stack.pop()
+            try:
+                if task == 'subtract':
+                    response = await user_manager_breaker.call_async(
+                        func=handle_request,
+                        path=f'/transfer',
+                        method='PUT',
+                        host_get=get_round_robin_user_manager,
+                        service_name=service_name,
+                        headers={'Authorization': f'Bearer {server_token}'},
+                        data={"amount": data['amount'], "username": source_username}
+                    )
+                    print(f'Rolling back subtract: {response.text}')
 
-    return r
+                elif task == 'add':
+                    response = await user_manager_breaker.call_async(
+                        func=handle_request,
+                        path=f'/transfer',
+                        method='PUT',
+                        host_get=get_round_robin_user_manager,
+                        service_name=service_name,
+                        headers={'Authorization': f'Bearer {server_token}'},
+                        data={"amount": -data['amount'], "username": data['username']}
+                    )
+                    print(f'Rolling back add: {response.text}')
 
+            except Exception as e:
+                print(f'Failed to rollback task {task}: {e}')
 
-@app.route('/transfer', methods=['GET'])
-@rate_limit(app.config['RATE_LIMIT'], app.config['RATE_LIMIT_PERIOD'])
-async def get_transfers():
-    host = get_round_robin_exchange_service()
-
-    if host is None:
-        return jsonify({'error': 'No user manager services available'}), 503
-
-    async with AsyncClient(timeout=30.0) as client:
-        response = await client.request(
-            method='GET',
-            url=f'http://{host}/transfer',
-            headers={'Authorization': request.headers['Authorization']}
-        )
-
-    try:
-        r = jsonify(loads(response.text)), response.status_code
-    except Exception as e:
-        r = response.text, response.status_code
-
-    return r
+        return jsonify({'error': f'Failed to handle request: {e}'}), 500

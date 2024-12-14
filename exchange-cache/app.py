@@ -5,6 +5,7 @@ from httpx import AsyncClient
 from socket import gethostname
 from os import environ
 from hashlib import sha256
+from bisect import bisect, insort
 
 
 RATE_LIFETIME = 60 * 60  # 1 hour
@@ -49,7 +50,18 @@ def hash(value: str) -> int:
 
 
 def get_server(baseCurrency: str) -> str:
-    server_key = cache_ids[hash(baseCurrency) % len(cache_ids)]
+    # server_key = cache_ids[hash(baseCurrency) % len(cache_ids)]
+    server_key = cache_ids[bisect(cache_ids, hash(baseCurrency)) % len(cache_ids)]
+    return f"http://{cache_ring[server_key]}"
+
+
+def get_server_top_server(baseCurrency: str) -> int:
+    server_key = cache_ids[(bisect(cache_ids, hash(baseCurrency)) + 1) % len(cache_ids)]
+    return f"http://{cache_ring[server_key]}"
+
+
+def get_server_bottom_server(baseCurrency: str) -> int:
+    server_key = cache_ids[(bisect(cache_ids, hash(baseCurrency)) + 1) % len(cache_ids)]
     return f"http://{cache_ring[server_key]}"
 
 
@@ -181,41 +193,46 @@ async def get_currency():
                         "targetCurrency": targetCurrency
                     }
                 )
+            if response.status_code < 500:
+                return response.json(), response.status_code
+        except Exception as e:
+            print(f"Failed to get rate from {server}: {e}")
+
+        try:
+            async with AsyncClient() as client:
+                response = await client.get(
+                    f"http://{get_server_top_server(baseCurrency)}/",
+                    params={
+                        "baseCurrency": baseCurrency,
+                        "targetCurrency": targetCurrency
+                    }
+                )
 
             if response.status_code < 500:
                 return response.json(), response.status_code
-            else:
-                async with AsyncClient() as client:
-                    response = await client.get(
-                        f"{top_server_url}/",
-                        params={
-                            "baseCurrency": baseCurrency,
-                            "targetCurrency": targetCurrency
-                        }
-                    )
+        except Exception as e:
+            print(f"Failed to get rate from {get_server_top_server(baseCurrency)}: {e}")
 
-                if response.status_code < 500:
-                    return response.json(), response.status_code
+        try:
+            async with AsyncClient() as client:
+                response = await client.get(
+                    f"http://{get_server_bottom_server(baseCurrency)}/",
+                    params={
+                        "baseCurrency": baseCurrency,
+                        "targetCurrency": targetCurrency
+                    }
+                )
 
-                else:
-                    async with AsyncClient() as client:
-                        response = await client.get(
-                            f"{bottom_server_url}/",
-                            params={
-                                "baseCurrency": baseCurrency,
-                                "targetCurrency": targetCurrency
-                            }
-                        )
+            if response.status_code < 500:
+                return response.json(), response.status_code
+        except Exception as e:
+            print(f"Failed to get rate from {get_server_bottom_server(baseCurrency)}: {e}")
 
-                    if response.status_code < 500:
-                        return response.json(), response.status_code
-
-                    else:
-                        return jsonify(
-                            {
-                                "error": "Failed to get rate."
-                            }
-                        ), 500
+            return jsonify(
+                {
+                    "error": "Failed to get rate."
+                }
+            ), 500
 
         except Exception as e:
             return jsonify(

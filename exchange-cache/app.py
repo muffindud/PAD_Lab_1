@@ -51,17 +51,26 @@ def hash(value: str) -> int:
 
 def get_server(baseCurrency: str) -> str:
     # server_key = cache_ids[hash(baseCurrency) % len(cache_ids)]
-    server_key = cache_ids[bisect(cache_ids, hash(baseCurrency)) % len(cache_ids)]
+    ind = bisect(cache_ids, hash(baseCurrency))
+    if ind == len(cache_ids):
+        ind = 0
+    server_key = cache_ids[ind]
     return f"http://{cache_ring[server_key]}"
 
 
 def get_server_top_server(baseCurrency: str) -> int:
-    server_key = cache_ids[(bisect(cache_ids, hash(baseCurrency)) + 1) % len(cache_ids)]
+    ind = bisect(cache_ids, hash(baseCurrency)) + 1
+    if ind == len(cache_ids):
+        ind = 0
+    server_key = cache_ids[ind]
     return f"http://{cache_ring[server_key]}"
 
 
 def get_server_bottom_server(baseCurrency: str) -> int:
-    server_key = cache_ids[(bisect(cache_ids, hash(baseCurrency)) - 1) % len(cache_ids)]
+    ind = bisect(cache_ids, hash(baseCurrency)) - 1
+    if ind == len(cache_ids):
+        ind = 0
+    server_key = cache_ids[ind]
     return f"http://{cache_ring[server_key]}"
 
 

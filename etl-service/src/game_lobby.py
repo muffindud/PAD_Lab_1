@@ -23,7 +23,7 @@ class MongoConn:
             result[id] = {
                 'lobby': r['lobbyId'],
                 'actions': [
-                    (entry.split(' ')[0][:-1], entry.split(' ')[1]) for entry in r['gameActions']
+                    (entry.split(' ')[0][:-1], entry.split(' ')[1:]) for entry in r['gameActions']
                 ],
             }
 
@@ -41,7 +41,7 @@ class MongoConn:
     def get_data_since_last_id(self, last_id):
         return self.pack_record(
             self.db.game_logs.find(
-                {'_id': {'$gte': ObjectId(hex(int(last_id))[2:])}}
+                {'_id': {'$gt': ObjectId(hex(int(last_id))[2:])}}
             )
         )
 

@@ -41,7 +41,7 @@ class MongoConn:
     def get_data_since_last_id(self, last_id):
         return self.pack_record(
             self.db.game_logs.find(
-                {'_id': {'$gt': ObjectId(hex(last_id)[2:])}}
+                {'_id': {'$gt': ObjectId(hex(int(last_id))[2:])}}
             )
         )
 

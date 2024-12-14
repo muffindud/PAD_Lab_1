@@ -94,72 +94,72 @@ services:
       replicas: 1
       endpoint_mode: vip
 
-  # game_lobby:
-  #   build: ./game_lobby
-  #   depends_on:
-  #     - service-discovery
-  #   ports:
-  #     - "$GAME_LOBBY_PORT"
-  #   environment:
-  #     - SERVICE_DISCOVERY_HOST=service-discovery
-  #     - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
-  #     - GAME_LOBBY_PORT=$GAME_LOBBY_PORT
-  #     - JWT_INTERNAL_SECRET=$JWT_INTERNAL_SECRET
-  #     - JWT_USER_SECRET=$USER_MANAGER_JWT_USER_SECRET
-  #     - EXCHANGE_SERVICE_HOST=exchange-service
-  #     - EXCHANGE_SERVICE_PORT=$EXCHANGE_SERVICE_PORT
-  #     - MONGO_HOST=game_lobby_logs_db
-  #     - MONGO_PORT=$MONGO_PORT
-  #     - MONGO_DB_NAME=$MONGO_DB_NAME
-  #     - MONGO_ROOT_USER=$MONGO_ROOT_USER
-  #     - MONGO_ROOT_PASS=$MONGO_ROOT_PASS
-  #   extra_hosts:
-  #     - "host.docker.internal:host-gateway"
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #   deploy:
-  #     mode: replicated
-  #     replicas: 3
-  #     endpoint_mode: vip
+  game_lobby:
+    build: ./game_lobby
+    depends_on:
+      - service-discovery
+    ports:
+      - "$GAME_LOBBY_PORT"
+    environment:
+      - SERVICE_DISCOVERY_HOST=service-discovery
+      - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
+      - GAME_LOBBY_PORT=$GAME_LOBBY_PORT
+      - JWT_INTERNAL_SECRET=$JWT_INTERNAL_SECRET
+      - JWT_USER_SECRET=$USER_MANAGER_JWT_USER_SECRET
+      - EXCHANGE_SERVICE_HOST=exchange-service
+      - EXCHANGE_SERVICE_PORT=$EXCHANGE_SERVICE_PORT
+      - MONGO_HOST=game_lobby_logs_db
+      - MONGO_PORT=$MONGO_PORT
+      - MONGO_DB_NAME=$MONGO_DB_NAME
+      - MONGO_ROOT_USER=$MONGO_ROOT_USER
+      - MONGO_ROOT_PASS=$MONGO_ROOT_PASS
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      mode: replicated
+      replicas: 3
+      endpoint_mode: vip
 
-  # exchange-cache:
-  #   build: ./exchange-cache
-  #   depends_on:
-  #     - service-discovery
-  #   environment:
-  #     - QUART_RUN_HOST=0.0.0.0
-  #     - QUART_RUN_PORT=$EXCHANGE_CACHE_PORT
-  #     - SERVICE_DISCOVERY_HOST=service-discovery
-  #     - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
-  #   deploy:
-  #     mode: replicated
-  #     replicas: 5
-  #     endpoint_mode: vip
+  exchange-cache:
+    build: ./exchange-cache
+    depends_on:
+      - service-discovery
+    environment:
+      - QUART_RUN_HOST=0.0.0.0
+      - QUART_RUN_PORT=$EXCHANGE_CACHE_PORT
+      - SERVICE_DISCOVERY_HOST=service-discovery
+      - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
+    deploy:
+      mode: replicated
+      replicas: 5
+      endpoint_mode: vip
 
-  # exchange-service:
-  #   build: ./exchange-service
-  #   depends_on:
-  #     - service-discovery
-  #     - exchange-cache
-  #     - user_manager_transfer_db
-  #   environment:
-  #     - SERVICE_DISCOVERY_HOST=service-discovery
-  #     - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
-  #     - PORT=$EXCHANGE_SERVICE_PORT
-  #     - EXCHANGE_CACHE_HOST=exchange-cache
-  #     - EXCHANGE_CACHE_PORT=$EXCHANGE_CACHE_PORT
-  #     - NEO4J_BOLT_PORT=$NEO4J_BOLT_PORT
-  #     - NEO4J_BROWSER_PORT=$NEO4J_BROWSER_PORT
-  #     - NEO4J_USER=$NEO4J_USER
-  #     - NEO4J_PASS=$NEO4J_PASS
-  #     - NEO4J_HOST=user_manager_transfer_db
-  #     - NEO4J_DATABASE=$NEO4J_DATABASE
-  #     - JWT_USER_SECRET=$USER_MANAGER_JWT_USER_SECRET
-  #     - JWT_INTERNAL_SECRET=$JWT_INTERNAL_SECRET
-  #   deploy:
-  #     mode: replicated
-  #     replicas: 3
-  #     endpoint_mode: vip
+  exchange-service:
+    build: ./exchange-service
+    depends_on:
+      - service-discovery
+      - exchange-cache
+      - user_manager_transfer_db
+    environment:
+      - SERVICE_DISCOVERY_HOST=service-discovery
+      - SERVICE_DISCOVERY_PORT=$SERVICE_DISCOVERY_PORT
+      - PORT=$EXCHANGE_SERVICE_PORT
+      - EXCHANGE_CACHE_HOST=exchange-cache
+      - EXCHANGE_CACHE_PORT=$EXCHANGE_CACHE_PORT
+      - NEO4J_BOLT_PORT=$NEO4J_BOLT_PORT
+      - NEO4J_BROWSER_PORT=$NEO4J_BROWSER_PORT
+      - NEO4J_USER=$NEO4J_USER
+      - NEO4J_PASS=$NEO4J_PASS
+      - NEO4J_HOST=user_manager_transfer_db
+      - NEO4J_DATABASE=$NEO4J_DATABASE
+      - JWT_USER_SECRET=$USER_MANAGER_JWT_USER_SECRET
+      - JWT_INTERNAL_SECRET=$JWT_INTERNAL_SECRET
+    deploy:
+      mode: replicated
+      replicas: 3
+      endpoint_mode: vip
 
   etl-service:
     build: ./etl-service
@@ -190,35 +190,35 @@ services:
       - GAME_LOBBY_LOGS_DB_PASS=$MONGO_ROOT_PASS
       - GAME_LOBBY_LOGS_DB_NAME=$MONGO_DB_NAME
 
-  # prometheus:
-  #   image: prom/prometheus
-  #   ports:
-  #     - "$PROMETHEUS_PORT:$PROMETHEUS_PORT"
-  #   depends_on:
-  #     - service-discovery
-  #     - gateway
-  #     - user_manager
-  #     - game_lobby
-  #     - exchange-service
-  #   extra_hosts:
-  #     - "host.docker.internal:host-gateway"
-  #   volumes:
-  #     - ./prometheus.yaml:/etc/prometheus/prometheus.yaml
-  #     - prometheus_data:/prometheus
-  #   command:
-  #     - '--config.file=/etc/prometheus/prometheus.yaml'
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "$PROMETHEUS_PORT:$PROMETHEUS_PORT"
+    depends_on:
+      - service-discovery
+      - gateway
+      - user_manager
+      - game_lobby
+      - exchange-service
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yaml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yaml'
 
-  # grafana:
-  #   image: grafana/grafana
-  #   ports:
-  #     - "$GRAFANA_PORT:3000"
-  #   depends_on:
-  #     - prometheus
-  #   environment:
-  #     - GF_SECURITY_ADMIN_USER=$GRAFANA_USER
-  #     - GF_SECURITY_ADMIN_PASSWORD=$GRAFANA_PASS
-  #   volumes:
-  #     - grafana_data:/var/lib/grafana
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "$GRAFANA_PORT:3000"
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_USER=$GRAFANA_USER
+      - GF_SECURITY_ADMIN_PASSWORD=$GRAFANA_PASS
+    volumes:
+      - grafana_data:/var/lib/grafana
 
 volumes:
   db_data:

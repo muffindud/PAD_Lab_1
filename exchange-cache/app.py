@@ -61,7 +61,7 @@ def get_server_top_server(baseCurrency: str) -> int:
 
 
 def get_server_bottom_server(baseCurrency: str) -> int:
-    server_key = cache_ids[(bisect(cache_ids, hash(baseCurrency)) + 1) % len(cache_ids)]
+    server_key = cache_ids[(bisect(cache_ids, hash(baseCurrency)) - 1) % len(cache_ids)]
     return f"http://{cache_ring[server_key]}"
 
 
@@ -150,7 +150,7 @@ async def get_currency():
 
     server = get_server(baseCurrency)
 
-    if server == local_server_url:
+    if server == local_server_url or get_server_bottom_server(baseCurrency) == local_server_url or get_server_top_server(baseCurrency) == local_server_url:
         if baseCurrency not in exchange_rates:
             return jsonify(
                 {
@@ -185,7 +185,7 @@ async def get_currency():
 
     else:
         try:
-            async with AsyncClient() as client:
+            async with AsyncClient(timeout=2.0) as client:
                 response = await client.get(
                     f"{server}/",
                     params={
@@ -199,9 +199,9 @@ async def get_currency():
             print(f"Failed to get rate from {server}: {e}")
 
         try:
-            async with AsyncClient() as client:
+            async with AsyncClient(timeout=2.0) as client:
                 response = await client.get(
-                    f"http://{get_server_top_server(baseCurrency)}/",
+                    f"{get_server_top_server(baseCurrency)}/",
                     params={
                         "baseCurrency": baseCurrency,
                         "targetCurrency": targetCurrency
@@ -214,9 +214,9 @@ async def get_currency():
             print(f"Failed to get rate from {get_server_top_server(baseCurrency)}: {e}")
 
         try:
-            async with AsyncClient() as client:
+            async with AsyncClient(timeout=2.0) as client:
                 response = await client.get(
-                    f"http://{get_server_bottom_server(baseCurrency)}/",
+                    f"{get_server_bottom_server(baseCurrency)}/",
                     params={
                         "baseCurrency": baseCurrency,
                         "targetCurrency": targetCurrency
@@ -228,18 +228,11 @@ async def get_currency():
         except Exception as e:
             print(f"Failed to get rate from {get_server_bottom_server(baseCurrency)}: {e}")
 
-            return jsonify(
-                {
-                    "error": "Failed to get rate."
-                }
-            ), 500
-
-        except Exception as e:
-            return jsonify(
-                {
-                    "error": f"Failed to get rate: {e}"
-                }
-            ), 500
+        return jsonify(
+            {
+                "error": "Failed to get rate."
+            }
+        ), 500
 
 
 @app.route('/', methods=['POST'])
